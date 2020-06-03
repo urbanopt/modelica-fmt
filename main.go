@@ -2,8 +2,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +14,7 @@ import (
 
 var (
 	parens = flag.Bool("p", false, "always break and indent contents in parens")
+	write  = flag.Bool("w", false, "overwrite the file(s)")
 )
 
 func usage() {
@@ -23,13 +27,30 @@ func isModelicaFile(f os.FileInfo) bool {
 	return !f.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".mo")
 }
 
-func visitFile(path string, f os.FileInfo, err error) error {
-	if isModelicaFile(f) {
-		err = processFile(path, os.Stdout)
+func processAndWriteFile(filename string) {
+	var b bytes.Buffer
+	err := processFile(filename, bufio.NewWriter(&b))
+	if err != nil {
+		panic(err)
 	}
+	if *write {
+		err := ioutil.WriteFile(filename, b.Bytes(), 777)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		b.WriteTo(os.Stdout)
+	}
+}
 
+func visitFile(filename string, f os.FileInfo, err error) error {
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintln(os.Stderr, err.Error())
+		return nil
+	}
+
+	if isModelicaFile(f) {
+		processAndWriteFile(filename)
 	}
 
 	return nil
@@ -60,9 +81,7 @@ func main() {
 		case dir.IsDir():
 			walkDir(path)
 		default:
-			if err := processFile(path, os.Stdout); err != nil {
-				fmt.Fprintln(os.Stderr, err.Error())
-			}
+			processAndWriteFile(path)
 		}
 	}
 }
