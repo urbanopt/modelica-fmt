@@ -29,6 +29,10 @@ func insertIndentBefore(rule antlr.ParserRuleContext) bool {
 		parser.IString_commentContext,
 		parser.IAnnotationContext:
 		return true
+	case
+		parser.IArgumentContext,
+		parser.INamed_argumentContext:
+		return alwaysIndentParens
 	default:
 		return false
 	}
@@ -157,18 +161,9 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 		l.writeComment(commentToken)
 	}
 
-	if alwaysIndentParens && tokenInGroup(node.GetText(), listCloseTokens) {
-		l.numNestedParens--
-	}
-
 	l.writeSpaceBefore(node.GetSymbol())
 
 	l.writer.WriteString(node.GetText())
-
-	if alwaysIndentParens && tokenInGroup(node.GetText(), listOpenTokens) {
-		l.writeNewline()
-		l.numNestedParens++
-	}
 
 	if l.numNestedParens > 0 && node.GetText() == "," {
 		l.writeNewline()
