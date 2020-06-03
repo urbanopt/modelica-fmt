@@ -12,10 +12,13 @@ import (
 
 var alwaysIndentParens = false
 
-// lexer token types for comments
 const (
+	// lexer token types for comments
 	commentTokenType     = 93
 	lineCommentTokenType = 94
+
+	// indent
+	spaceIndent = "  "
 )
 
 // insertIndentBefore returns true if the rule should be indented
@@ -143,7 +146,7 @@ func (l *modelicaListener) writeSpaceBefore(token antlr.Token) {
 		// insert indentation
 		if l.indentation > 0 {
 			indentation := l.indentation + l.numNestedParens
-			l.writer.WriteString(strings.Repeat("    ", indentation))
+			l.writer.WriteString(strings.Repeat(spaceIndent, indentation))
 		}
 		l.onNewLine = false
 	} else if !tokenInGroup(l.previousTokenText, noSpaceAfterTokens) && !tokenInGroup(token.GetText(), noSpaceBeforeTokens) {
