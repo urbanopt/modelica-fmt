@@ -30,7 +30,8 @@ func insertIndentBefore(rule antlr.ParserRuleContext) bool {
 		parser.IAlgorithm_statementsContext,
 		parser.IControl_structure_bodyContext,
 		parser.IString_commentContext,
-		parser.IAnnotationContext:
+		parser.IAnnotationContext,
+		parser.IExpression_listContext:
 		return true
 	case
 		parser.IArgumentContext,
