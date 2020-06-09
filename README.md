@@ -10,7 +10,7 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 
 brew install go
 
-go main build
+go build main.go
 ```
 
 
