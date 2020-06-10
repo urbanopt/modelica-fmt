@@ -16,7 +16,7 @@ Arguments:
 To run the example:
 
 ```bash
-./modelicafmt examples/example.mo > examples/example_formatted.mo
+./modelicafmt examples/gmt-building.mo > examples/gmt-building-out.mo
 ```
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.

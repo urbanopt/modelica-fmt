@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	parens = flag.Bool("p", false, "always break and indent contents in parens")
+	parens = flag.Bool("p", false, "always break and indent contents in parentheses")
 	write  = flag.Bool("w", false, "overwrite the file(s)")
 )
 
