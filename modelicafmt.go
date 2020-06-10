@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"github.com/urbanopt/modelicafmt/parser"
+	"github.com/urbanopt/modelicafmt/thirdparty/parser"
 )
 
 var alwaysIndentParens = false
@@ -25,17 +25,17 @@ const (
 func insertIndentBefore(rule antlr.ParserRuleContext) bool {
 	switch rule.(type) {
 	case
-		parser.IElementContext,
-		parser.IEquationsContext,
-		parser.IAlgorithm_statementsContext,
-		parser.IControl_structure_bodyContext,
-		parser.IString_commentContext,
-		parser.IAnnotationContext,
-		parser.IExpression_listContext:
+			parser.IElementContext,
+			parser.IEquationsContext,
+			parser.IAlgorithm_statementsContext,
+			parser.IControl_structure_bodyContext,
+			parser.IString_commentContext,
+			parser.IAnnotationContext,
+			parser.IExpression_listContext:
 		return true
 	case
-		parser.IArgumentContext,
-		parser.INamed_argumentContext:
+			parser.IArgumentContext,
+			parser.INamed_argumentContext:
 		return alwaysIndentParens
 	default:
 		return false
@@ -60,8 +60,8 @@ func insertSpaceBefore(currentTokenText, previousTokenText string) bool {
 func insertNewlineBefore(rule antlr.ParserRuleContext) bool {
 	switch rule.(type) {
 	case
-		parser.ICompositionContext,
-		parser.IEquationsContext:
+			parser.ICompositionContext,
+			parser.IEquationsContext:
 		return true
 	default:
 		return false
