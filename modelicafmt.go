@@ -42,6 +42,20 @@ func insertIndentBefore(rule antlr.ParserRuleContext) bool {
 	}
 }
 
+// insertSpaceBefore returns true if a space should be inserted before the current token
+func insertSpaceBefore(currentTokenText, previousTokenText string) bool {
+	switch currentTokenText {
+	case "(":
+		if previousTokenText == "annotation" {
+			return true
+		}
+		fallthrough
+	default:
+		return !tokenInGroup(previousTokenText, noSpaceAfterTokens) &&
+			!tokenInGroup(currentTokenText, noSpaceBeforeTokens)
+	}
+}
+
 // insertNewlineBefore returns true if the rule should be on a new line
 func insertNewlineBefore(rule antlr.ParserRuleContext) bool {
 	switch rule.(type) {
@@ -55,6 +69,8 @@ func insertNewlineBefore(rule antlr.ParserRuleContext) bool {
 }
 
 var (
+	// tokens which should *generally* not have a space after them
+	// this can be overridden in the insertSpace function
 	noSpaceAfterTokens = []string{
 		"(",
 		"=",
@@ -65,6 +81,8 @@ var (
 		";",
 	}
 
+	// tokens which should *generally* not have a space before them
+	// this can be overridden in the insertSpace function
 	noSpaceBeforeTokens = []string{
 		"(", ")",
 		"[", "]",
@@ -74,16 +92,6 @@ var (
 		",",
 		".",
 		"-", "^", "*", "/",
-	}
-
-	listOpenTokens = []string{
-		"(",
-		"{",
-	}
-
-	listCloseTokens = []string{
-		")",
-		"}",
 	}
 )
 
@@ -150,7 +158,7 @@ func (l *modelicaListener) writeSpaceBefore(token antlr.Token) {
 			l.writer.WriteString(strings.Repeat(spaceIndent, indentation))
 		}
 		l.onNewLine = false
-	} else if !tokenInGroup(l.previousTokenText, noSpaceAfterTokens) && !tokenInGroup(token.GetText(), noSpaceBeforeTokens) {
+	} else if insertSpaceBefore(token.GetText(), l.previousTokenText) {
 		// insert a space
 		l.writer.WriteString(" ")
 	}
