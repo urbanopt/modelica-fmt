@@ -13,10 +13,17 @@ Arguments:
   sources  one or more files or directories to format
 ```
 
+To run the example:
+
+```bash
+./modelicafmt examples/example.mo > examples/example_formatted.mo
+```
+
+The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
+
 ## Building
 
 ```bash
-
 brew install go
 
 # in the repository root directory
