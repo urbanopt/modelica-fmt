@@ -22,21 +22,21 @@ const (
 )
 
 // insertIndentBefore returns true if the rule should be indented
-func insertIndentBefore(rule antlr.ParserRuleContext) bool {
+func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool {
 	switch rule.(type) {
 	case
-			parser.IElementContext,
-			parser.IEquationsContext,
-			parser.IAlgorithm_statementsContext,
-			parser.IControl_structure_bodyContext,
-			parser.IString_commentContext,
-			parser.IAnnotationContext,
-			parser.IExpression_listContext:
+		parser.IElementContext,
+		parser.IEquationsContext,
+		parser.IAlgorithm_statementsContext,
+		parser.IControl_structure_bodyContext,
+		parser.IString_commentContext,
+		parser.IAnnotationContext,
+		parser.IExpression_listContext:
 		return true
 	case
-			parser.IArgumentContext,
-			parser.INamed_argumentContext:
-		return alwaysIndentParens
+		parser.IArgumentContext,
+		parser.INamed_argumentContext:
+		return alwaysIndentParens && !l.inAnnotation
 	default:
 		return false
 	}
@@ -60,8 +60,8 @@ func insertSpaceBefore(currentTokenText, previousTokenText string) bool {
 func insertNewlineBefore(rule antlr.ParserRuleContext) bool {
 	switch rule.(type) {
 	case
-			parser.ICompositionContext,
-			parser.IEquationsContext:
+		parser.ICompositionContext,
+		parser.IEquationsContext:
 		return true
 	default:
 		return false
@@ -115,6 +115,10 @@ type modelicaListener struct {
 	previousTokenIdx             int           // index of previous token
 	numNestedParens              int           // tracks how deeply nested the write position is
 	commentTokens                []antlr.Token // stores comments to insert while writing
+	// NOTE: consider refactoring this simple approach for context awareness with
+	// a set.
+	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
+	inAnnotation bool // true if current or ancestor context is annotation rule
 }
 
 func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
@@ -123,6 +127,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
 		writer:               bufio.NewWriter(out),
 		indentation:          0,
 		onNewLine:            true,
+		inAnnotation:         false,
 		previousTokenText:    "",
 		previousTokenIdx:     -1,
 		numNestedParens:      0,
@@ -194,7 +199,7 @@ func (l *modelicaListener) EnterEveryRule(node antlr.ParserRuleContext) {
 		l.writeNewline()
 	}
 
-	if insertIndentBefore(node) {
+	if l.insertIndentBefore(node) {
 		l.indentation++
 		if !l.onNewLine {
 			l.writeNewline()
@@ -203,9 +208,17 @@ func (l *modelicaListener) EnterEveryRule(node antlr.ParserRuleContext) {
 }
 
 func (l *modelicaListener) ExitEveryRule(node antlr.ParserRuleContext) {
-	if insertIndentBefore(node) {
+	if l.insertIndentBefore(node) {
 		l.indentation--
 	}
+}
+
+func (l *modelicaListener) EnterAnnotation(node *parser.AnnotationContext) {
+	l.inAnnotation = true
+}
+
+func (l *modelicaListener) ExitAnnotation(node *parser.AnnotationContext) {
+	l.inAnnotation = false
 }
 
 // commentCollector is a wrapper around the default lexer which collects comment
