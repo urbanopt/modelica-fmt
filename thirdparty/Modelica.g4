@@ -258,11 +258,15 @@ connect_clause
 
 expression
    : simple_expression
-   | 'if' expression 'then' expression ('elseif' expression 'then' expression)* 'else' expression
+   | 'if' expression 'then' if_expression_body ('elseif' expression 'then' if_expression_body)* 'else' if_expression_body
    ;
 
 simple_expression
    : logical_expression (':' logical_expression (':' logical_expression)?)?
+   ;
+
+if_expression_body
+   : expression
    ;
 
 logical_expression
