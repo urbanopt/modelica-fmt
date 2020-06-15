@@ -1,4 +1,5 @@
 .idea/
 .antlr/
+dist/
 
 modelicafmt
