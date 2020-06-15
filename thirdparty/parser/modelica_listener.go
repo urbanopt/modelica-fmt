@@ -182,6 +182,12 @@ type ModelicaListener interface {
 	// EnterIf_expression_body is called when entering the if_expression_body production.
 	EnterIf_expression_body(c *If_expression_bodyContext)
 
+	// EnterElseif_expression_condition is called when entering the elseif_expression_condition production.
+	EnterElseif_expression_condition(c *Elseif_expression_conditionContext)
+
+	// EnterElse_expression_condition is called when entering the else_expression_condition production.
+	EnterElse_expression_condition(c *Else_expression_conditionContext)
+
 	// EnterLogical_expression is called when entering the logical_expression production.
 	EnterLogical_expression(c *Logical_expressionContext)
 
@@ -430,6 +436,12 @@ type ModelicaListener interface {
 
 	// ExitIf_expression_body is called when exiting the if_expression_body production.
 	ExitIf_expression_body(c *If_expression_bodyContext)
+
+	// ExitElseif_expression_condition is called when exiting the elseif_expression_condition production.
+	ExitElseif_expression_condition(c *Elseif_expression_conditionContext)
+
+	// ExitElse_expression_condition is called when exiting the else_expression_condition production.
+	ExitElse_expression_condition(c *Else_expression_conditionContext)
 
 	// ExitLogical_expression is called when exiting the logical_expression production.
 	ExitLogical_expression(c *Logical_expressionContext)

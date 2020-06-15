@@ -369,6 +369,18 @@ func (s *BaseModelicaListener) EnterIf_expression_body(ctx *If_expression_bodyCo
 // ExitIf_expression_body is called when production if_expression_body is exited.
 func (s *BaseModelicaListener) ExitIf_expression_body(ctx *If_expression_bodyContext) {}
 
+// EnterElseif_expression_condition is called when production elseif_expression_condition is entered.
+func (s *BaseModelicaListener) EnterElseif_expression_condition(ctx *Elseif_expression_conditionContext) {}
+
+// ExitElseif_expression_condition is called when production elseif_expression_condition is exited.
+func (s *BaseModelicaListener) ExitElseif_expression_condition(ctx *Elseif_expression_conditionContext) {}
+
+// EnterElse_expression_condition is called when production else_expression_condition is entered.
+func (s *BaseModelicaListener) EnterElse_expression_condition(ctx *Else_expression_conditionContext) {}
+
+// ExitElse_expression_condition is called when production else_expression_condition is exited.
+func (s *BaseModelicaListener) ExitElse_expression_condition(ctx *Else_expression_conditionContext) {}
+
 // EnterLogical_expression is called when production logical_expression is entered.
 func (s *BaseModelicaListener) EnterLogical_expression(ctx *Logical_expressionContext) {}
 
