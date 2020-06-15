@@ -182,6 +182,9 @@ type ModelicaListener interface {
 	// EnterIf_expression_body is called when entering the if_expression_body production.
 	EnterIf_expression_body(c *If_expression_bodyContext)
 
+	// EnterIf_expression_condition is called when entering the if_expression_condition production.
+	EnterIf_expression_condition(c *If_expression_conditionContext)
+
 	// EnterElseif_expression_condition is called when entering the elseif_expression_condition production.
 	EnterElseif_expression_condition(c *Elseif_expression_conditionContext)
 
@@ -220,6 +223,9 @@ type ModelicaListener interface {
 
 	// EnterPrimary is called when entering the primary production.
 	EnterPrimary(c *PrimaryContext)
+
+	// EnterVector is called when entering the vector production.
+	EnterVector(c *VectorContext)
 
 	// EnterName is called when entering the name production.
 	EnterName(c *NameContext)
@@ -437,6 +443,9 @@ type ModelicaListener interface {
 	// ExitIf_expression_body is called when exiting the if_expression_body production.
 	ExitIf_expression_body(c *If_expression_bodyContext)
 
+	// ExitIf_expression_condition is called when exiting the if_expression_condition production.
+	ExitIf_expression_condition(c *If_expression_conditionContext)
+
 	// ExitElseif_expression_condition is called when exiting the elseif_expression_condition production.
 	ExitElseif_expression_condition(c *Elseif_expression_conditionContext)
 
@@ -475,6 +484,9 @@ type ModelicaListener interface {
 
 	// ExitPrimary is called when exiting the primary production.
 	ExitPrimary(c *PrimaryContext)
+
+	// ExitVector is called when exiting the vector production.
+	ExitVector(c *VectorContext)
 
 	// ExitName is called when exiting the name production.
 	ExitName(c *NameContext)

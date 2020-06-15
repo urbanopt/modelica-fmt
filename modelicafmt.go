@@ -36,6 +36,7 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 		parser.IAnnotationContext,
 		parser.IExpression_listContext,
 		parser.IConstraining_clauseContext,
+		parser.IIf_expression_conditionContext,
 		parser.IElseif_expression_conditionContext,
 		parser.IElse_expression_conditionContext,
 		parser.IIf_expression_bodyContext:
@@ -43,7 +44,9 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 	case
 		parser.IArgumentContext,
 		parser.INamed_argumentContext:
-		return alwaysIndentParens && !l.inAnnotation
+		return alwaysIndentParens && 0 == l.inAnnotation
+	case parser.IFunction_argumentContext:
+		return alwaysIndentParens && 0 == l.inNamedArgument && 0 == l.inVector && 0 == l.inAnnotation
 	default:
 		return false
 	}
@@ -125,7 +128,9 @@ type modelicaListener struct {
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
 	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
-	inAnnotation bool // true if current or ancestor context is annotation rule
+	inAnnotation    int // true if current or ancestor context is annotation rule
+	inNamedArgument int // true if current or ancestor context is named argument
+	inVector        int // true if current or ancestor context is vector
 }
 
 func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
@@ -134,7 +139,9 @@ func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
 		writer:               bufio.NewWriter(out),
 		indentation:          0,
 		onNewLine:            true,
-		inAnnotation:         false,
+		inAnnotation:         0,
+		inVector:             0,
+		inNamedArgument:      0,
 		previousTokenText:    "",
 		previousTokenIdx:     -1,
 		numNestedParens:      0,
@@ -221,11 +228,27 @@ func (l *modelicaListener) ExitEveryRule(node antlr.ParserRuleContext) {
 }
 
 func (l *modelicaListener) EnterAnnotation(node *parser.AnnotationContext) {
-	l.inAnnotation = true
+	l.inAnnotation++
 }
 
 func (l *modelicaListener) ExitAnnotation(node *parser.AnnotationContext) {
-	l.inAnnotation = false
+	l.inAnnotation--
+}
+
+func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
+	l.inVector++
+}
+
+func (l *modelicaListener) ExitVector(node *parser.VectorContext) {
+	l.inVector--
+}
+
+func (l *modelicaListener) EnterNamed_argument(node *parser.Named_argumentContext) {
+	l.inNamedArgument++
+}
+
+func (l *modelicaListener) ExitNamed_argument(node *parser.Named_argumentContext) {
+	l.inNamedArgument--
 }
 
 // commentCollector is a wrapper around the default lexer which collects comment

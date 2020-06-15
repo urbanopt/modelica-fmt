@@ -369,6 +369,12 @@ func (s *BaseModelicaListener) EnterIf_expression_body(ctx *If_expression_bodyCo
 // ExitIf_expression_body is called when production if_expression_body is exited.
 func (s *BaseModelicaListener) ExitIf_expression_body(ctx *If_expression_bodyContext) {}
 
+// EnterIf_expression_condition is called when production if_expression_condition is entered.
+func (s *BaseModelicaListener) EnterIf_expression_condition(ctx *If_expression_conditionContext) {}
+
+// ExitIf_expression_condition is called when production if_expression_condition is exited.
+func (s *BaseModelicaListener) ExitIf_expression_condition(ctx *If_expression_conditionContext) {}
+
 // EnterElseif_expression_condition is called when production elseif_expression_condition is entered.
 func (s *BaseModelicaListener) EnterElseif_expression_condition(ctx *Elseif_expression_conditionContext) {}
 
@@ -446,6 +452,12 @@ func (s *BaseModelicaListener) EnterPrimary(ctx *PrimaryContext) {}
 
 // ExitPrimary is called when production primary is exited.
 func (s *BaseModelicaListener) ExitPrimary(ctx *PrimaryContext) {}
+
+// EnterVector is called when production vector is entered.
+func (s *BaseModelicaListener) EnterVector(ctx *VectorContext) {}
+
+// ExitVector is called when production vector is exited.
+func (s *BaseModelicaListener) ExitVector(ctx *VectorContext) {}
 
 // EnterName is called when production name is entered.
 func (s *BaseModelicaListener) EnterName(ctx *NameContext) {}

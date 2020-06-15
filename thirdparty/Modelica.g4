@@ -258,7 +258,7 @@ connect_clause
 
 expression
    : simple_expression
-   | 'if' expression 'then' if_expression_body (elseif_expression_condition)* else_expression_condition
+   | if_expression_condition (elseif_expression_condition)* else_expression_condition
    ;
 
 simple_expression
@@ -267,6 +267,10 @@ simple_expression
 
 if_expression_body
    : expression
+   ;
+
+if_expression_condition
+   : 'if' expression 'then' if_expression_body
    ;
 
 elseif_expression_condition
@@ -337,8 +341,12 @@ primary
    | component_reference
    | '(' output_expression_list ')'
    | '[' expression_list (';' expression_list)* ']'
-   | '{' function_arguments '}'
+   | vector
    | 'end'
+   ;
+
+vector
+   : '{' function_arguments '}'
    ;
 
 name
