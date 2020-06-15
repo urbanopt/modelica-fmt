@@ -47,8 +47,8 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 	}
 }
 
-// insertSpaceBefore returns true if a space should be inserted before the current token
-func insertSpaceBefore(currentTokenText, previousTokenText string) bool {
+// insertSpaceBeforeToken returns true if a space should be inserted before the current token
+func insertSpaceBeforeToken(currentTokenText, previousTokenText string) bool {
 	switch currentTokenText {
 	case "(":
 		if previousTokenText == "annotation" {
@@ -168,7 +168,7 @@ func (l *modelicaListener) writeSpaceBefore(token antlr.Token) {
 			l.writer.WriteString(strings.Repeat(spaceIndent, indentation))
 		}
 		l.onNewLine = false
-	} else if insertSpaceBefore(token.GetText(), l.previousTokenText) {
+	} else if insertSpaceBeforeToken(token.GetText(), l.previousTokenText) {
 		// insert a space
 		l.writer.WriteString(" ")
 	}
