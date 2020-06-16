@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 docker build -t antlr4:latest -f thirdparty/Dockerfile-Antlr .
 
