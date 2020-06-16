@@ -1,4 +1,6 @@
+.python-version
 .idea/
 .antlr/
+dist/
 
 modelicafmt
