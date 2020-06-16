@@ -1,3 +1,6 @@
+// Copyright (c) 2020, Alliance for Sustainable Energy, LLC.
+// All rights reserved.
+
 package main
 
 import (
