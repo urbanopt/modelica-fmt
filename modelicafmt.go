@@ -132,7 +132,6 @@ type modelicaListener struct {
 	lineIndentIncreased          bool          // true when the indentation level has already been increased for a line
 	previousTokenText            string        // text of previous token
 	previousTokenIdx             int           // index of previous token
-	numNestedParens              int           // tracks how deeply nested the write position is
 	commentTokens                []antlr.Token // stores comments to insert while writing
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
@@ -153,7 +152,6 @@ func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
 		inNamedArgument:      0,
 		previousTokenText:    "",
 		previousTokenIdx:     -1,
-		numNestedParens:      0,
 		commentTokens:        commentTokens,
 	}
 }
@@ -220,7 +218,7 @@ func (l *modelicaListener) writeSpaceBefore(token antlr.Token) {
 	if l.onNewLine {
 		// insert indentation
 		if l.indentation() > 0 {
-			indentation := l.indentation() + l.numNestedParens
+			indentation := l.indentation()
 			l.writer.WriteString(strings.Repeat(spaceIndent, indentation))
 		}
 		l.onNewLine = false
@@ -242,10 +240,6 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 	l.writeSpaceBefore(node.GetSymbol())
 
 	l.writer.WriteString(node.GetText())
-
-	if l.numNestedParens > 0 && node.GetText() == "," {
-		l.writeNewline()
-	}
 
 	if node.GetText() == ";" {
 		l.writeNewline()
