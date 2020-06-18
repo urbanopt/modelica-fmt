@@ -136,9 +136,9 @@ type modelicaListener struct {
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
 	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
-	inAnnotation    int // true if current or ancestor context is annotation rule
-	inNamedArgument int // true if current or ancestor context is named argument
-	inVector        int // true if current or ancestor context is vector
+	inAnnotation    int // counts number of current or ancestor contexts that are annotation rule
+	inNamedArgument int // counts number of current or ancestor contexts that are named argument
+	inVector        int // counts number of current or ancestor contexts that are vector
 }
 
 func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
