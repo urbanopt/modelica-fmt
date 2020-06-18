@@ -22,7 +22,10 @@ To run the example:
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
 
 ## Usage with pre-commit framework
-After adding modelicafmt to your system path, add the following lines to your .pre-commit-config.yaml file under the `repos:` section
+
+After adding modelicafmt to your system path, add the following lines to your .pre-commit-config.yaml file under the `repos:` section.
+Also, make sure to allow modelicafmt to run (especially on Mac). 
+
 ```yaml
 -
   repo: local
@@ -30,6 +33,8 @@ After adding modelicafmt to your system path, add the following lines to your .p
   -
     id: modelica-fmt
     name: Modelica Formatter
+    types: [file]
+    files: \.(mo)$
     entry: modelicafmt
     args: ["-w"]
     language: system
