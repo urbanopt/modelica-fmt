@@ -363,6 +363,12 @@ func (s *BaseModelicaListener) EnterSimple_expression(ctx *Simple_expressionCont
 // ExitSimple_expression is called when production simple_expression is exited.
 func (s *BaseModelicaListener) ExitSimple_expression(ctx *Simple_expressionContext) {}
 
+// EnterIf_expression is called when production if_expression is entered.
+func (s *BaseModelicaListener) EnterIf_expression(ctx *If_expressionContext) {}
+
+// ExitIf_expression is called when production if_expression is exited.
+func (s *BaseModelicaListener) ExitIf_expression(ctx *If_expressionContext) {}
+
 // EnterIf_expression_body is called when production if_expression_body is entered.
 func (s *BaseModelicaListener) EnterIf_expression_body(ctx *If_expression_bodyContext) {}
 

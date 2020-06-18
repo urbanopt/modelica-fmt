@@ -179,6 +179,9 @@ type ModelicaListener interface {
 	// EnterSimple_expression is called when entering the simple_expression production.
 	EnterSimple_expression(c *Simple_expressionContext)
 
+	// EnterIf_expression is called when entering the if_expression production.
+	EnterIf_expression(c *If_expressionContext)
+
 	// EnterIf_expression_body is called when entering the if_expression_body production.
 	EnterIf_expression_body(c *If_expression_bodyContext)
 
@@ -439,6 +442,9 @@ type ModelicaListener interface {
 
 	// ExitSimple_expression is called when exiting the simple_expression production.
 	ExitSimple_expression(c *Simple_expressionContext)
+
+	// ExitIf_expression is called when exiting the if_expression production.
+	ExitIf_expression(c *If_expressionContext)
 
 	// ExitIf_expression_body is called when exiting the if_expression_body production.
 	ExitIf_expression_body(c *If_expression_bodyContext)

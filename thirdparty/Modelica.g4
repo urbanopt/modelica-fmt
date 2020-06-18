@@ -259,11 +259,16 @@ connect_clause
 expression
    : simple_expression
    // changed from original file
-   | if_expression_condition (elseif_expression_condition)* else_expression_condition
+   | if_expression
    ;
 
 simple_expression
    : logical_expression (':' logical_expression (':' logical_expression)?)?
+   ;
+
+// added to original file
+if_expression
+   : if_expression_condition (elseif_expression_condition)* else_expression_condition
    ;
 
 // added to original file
