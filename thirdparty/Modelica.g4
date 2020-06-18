@@ -258,11 +258,37 @@ connect_clause
 
 expression
    : simple_expression
-   | 'if' expression 'then' expression ('elseif' expression 'then' expression)* 'else' expression
+   // changed from original file
+   | if_expression
    ;
 
 simple_expression
    : logical_expression (':' logical_expression (':' logical_expression)?)?
+   ;
+
+// added to original file
+if_expression
+   : if_expression_condition (elseif_expression_condition)* else_expression_condition
+   ;
+
+// added to original file
+if_expression_body
+   : expression
+   ;
+
+// added to original file
+if_expression_condition
+   : 'if' expression 'then' if_expression_body
+   ;
+
+// added to original file
+elseif_expression_condition
+   : 'elseif' expression 'then' if_expression_body
+   ;
+
+// added to original file
+else_expression_condition
+   : 'else' if_expression_body
    ;
 
 logical_expression
@@ -325,8 +351,14 @@ primary
    | component_reference
    | '(' output_expression_list ')'
    | '[' expression_list (';' expression_list)* ']'
-   | '{' function_arguments '}'
+   // changed from original file
+   | vector
    | 'end'
+   ;
+
+// added to original file
+vector
+   : '{' function_arguments '}'
    ;
 
 name
