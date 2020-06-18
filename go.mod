@@ -1,4 +1,4 @@
-module github.com/urbanopt/modelicafmt
+module github.com/urbanopt/modelica-fmt
 
 go 1.13
 

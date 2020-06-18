@@ -21,13 +21,28 @@ To run the example:
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
 
+## Usage with pre-commit framework
+After adding modelicafmt to your system path, add the following lines to your .pre-commit-config.yaml file under the `repos:` section
+```yaml
+-
+  repo: local
+  hooks:
+  -
+    id: modelica-fmt
+    name: Modelica Formatter
+    entry: modelicafmt
+    args: ["-w"]
+    language: system
+```
+See https://pre-commit.com/ for more information about the framework.
+
 ## Building
 
 ```bash
 brew install go
 
 # in the repository root directory
-go build
+go build -o modelicafmt
 ```
 
 
