@@ -13,8 +13,6 @@ import (
 	"github.com/urbanopt/modelica-fmt/thirdparty/parser"
 )
 
-var alwaysIndentParens = false
-
 const (
 	// lexer token types for comments
 	commentTokenType     = 93
@@ -42,9 +40,9 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 	case
 		parser.IArgumentContext,
 		parser.INamed_argumentContext:
-		return alwaysIndentParens && 0 == l.inAnnotation
+		return 0 == l.inAnnotation
 	case parser.IFunction_argumentContext:
-		return alwaysIndentParens && 0 == l.inNamedArgument && 0 == l.inVector && 0 == l.inAnnotation
+		return 0 == l.inNamedArgument && 0 == l.inVector && 0 == l.inAnnotation
 	default:
 		return false
 	}
