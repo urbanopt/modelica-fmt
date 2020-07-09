@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	parens = flag.Bool("p", false, "always break and indent contents in parentheses")
-	write  = flag.Bool("w", false, "overwrite the file(s)")
+	write = flag.Bool("w", false, "overwrite the file(s)")
 )
 
 func usage() {
@@ -69,10 +68,6 @@ func main() {
 	if flag.NArg() == 0 {
 		fmt.Fprintln(os.Stderr, "error: must provide at least one file or directory")
 		os.Exit(2)
-	}
-
-	if *parens {
-		alwaysIndentParens = true
 	}
 
 	for i := 0; i < flag.NArg(); i++ {

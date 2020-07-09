@@ -5,10 +5,9 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 ## Running
 
 ```bash
-modelicafmt [-w] [-p] [-help] <sources>...
+modelicafmt [-w] [-help] <sources>...
 Options:
   -w  overwrite source with formatted output. If flag is not present print to stdout
-  -p  indent on parens arguments
 Arguments:
   sources  one or more files or directories to format
 ```
