@@ -88,6 +88,7 @@ var (
 		"{",
 		"-", "^", "*", "/",
 		";",
+		":", // array range constructor
 	}
 
 	// tokens which should *generally* not have a space before them
@@ -101,6 +102,7 @@ var (
 		",",
 		".",
 		"-", "^", "*", "/",
+		":", // array range constructor
 	}
 )
 
