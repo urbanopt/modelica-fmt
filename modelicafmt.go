@@ -40,9 +40,9 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 	case
 		parser.IArgumentContext,
 		parser.INamed_argumentContext:
-		return 0 == l.inAnnotation
+		return 0 == l.inAnnotation || 0 < l.inModelAnnotation
 	case parser.IFunction_argumentContext:
-		return 0 == l.inNamedArgument && 0 == l.inVector && 0 == l.inAnnotation
+		return 0 == l.inNamedArgument && 0 == l.inVector && (0 == l.inAnnotation || 0 < l.inModelAnnotation)
 	default:
 		return false
 	}
@@ -134,9 +134,10 @@ type modelicaListener struct {
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
 	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
-	inAnnotation    int // counts number of current or ancestor contexts that are annotation rule
-	inNamedArgument int // counts number of current or ancestor contexts that are named argument
-	inVector        int // counts number of current or ancestor contexts that are vector
+	inAnnotation      int // counts number of current or ancestor contexts that are annotation rule
+	inModelAnnotation int // counts number of current or ancestor contexts that are model annotation rule
+	inNamedArgument   int // counts number of current or ancestor contexts that are named argument
+	inVector          int // counts number of current or ancestor contexts that are vector
 }
 
 func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
@@ -146,6 +147,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
 		onNewLine:            true,
 		lineIndentIncreased:  false,
 		inAnnotation:         0,
+		inModelAnnotation:    0,
 		inVector:             0,
 		inNamedArgument:      0,
 		previousTokenText:    "",
@@ -272,6 +274,14 @@ func (l *modelicaListener) EnterAnnotation(node *parser.AnnotationContext) {
 
 func (l *modelicaListener) ExitAnnotation(node *parser.AnnotationContext) {
 	l.inAnnotation--
+}
+
+func (l *modelicaListener) EnterModel_annotation(node *parser.Model_annotationContext) {
+	l.inModelAnnotation++
+}
+
+func (l *modelicaListener) ExitModel_annotation(node *parser.Model_annotationContext) {
+	l.inModelAnnotation--
 }
 
 func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
