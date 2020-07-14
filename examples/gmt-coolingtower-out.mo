@@ -156,62 +156,75 @@ equation
     Icon(
       coordinateSystem(
         preserveAspectRatio=false),
-      graphics={Text(
-        extent={{-98, 100}, {-86, 84}},
-        lineColor={0, 0, 127},
-        textString="y"), Text(
-        extent={{-104, 70}, {-70, 32}},
-        lineColor={0, 0, 127},
-        textString="TWB"), Rectangle(
-        extent={{-100, 81}, {-70, 78}},
-        lineColor={0, 0, 255},
-        pattern=LinePattern.None,
-        fillColor={0, 0, 127},
-        fillPattern=FillPattern.Solid), Text(
-        extent={{-54, 6}, {58,-114}},
-        lineColor={255, 255, 255},
-        fillColor={0, 127, 0},
-        fillPattern=FillPattern.Solid,
-        textString="Merkel"), Ellipse(
-        extent={{-54, 62}, {0, 50}},
-        lineColor={255, 255, 255},
-        fillColor={255, 255, 255},
-        fillPattern=FillPattern.Solid), Ellipse(
-        extent={{0, 62}, {54, 50}},
-        lineColor={255, 255, 255},
-        fillColor={255, 255, 255},
-        fillPattern=FillPattern.Solid), Rectangle(
-        extent={{78, 82}, {100, 78}},
-        lineColor={0, 0, 255},
-        pattern=LinePattern.None,
-        fillColor={0, 0, 127},
-        fillPattern=FillPattern.Solid), Rectangle(
-        extent={{70, 56}, {82, 52}},
-        lineColor={0, 0, 255},
-        pattern=LinePattern.None,
-        fillColor={0, 0, 127},
-        fillPattern=FillPattern.Solid), Rectangle(
-        extent={{78, 54}, {82, 80}},
-        lineColor={0, 0, 255},
-        pattern=LinePattern.None,
-        fillColor={0, 0, 127},
-        fillPattern=FillPattern.Solid), Text(
-        extent={{64, 114}, {98, 76}},
-        lineColor={0, 0, 127},
-        textString="PFan"), Rectangle(
-        extent={{78,-60}, {82,-4}},
-        lineColor={0, 0, 255},
-        pattern=LinePattern.None,
-        fillColor={0, 0, 127},
-        fillPattern=FillPattern.Solid), Text(
-        extent={{70,-58}, {104,-96}},
-        lineColor={0, 0, 127},
-        textString="TLvg"), Rectangle(
-        extent={{78,-58}, {102,-62}},
-        lineColor={0, 0, 255},
-        pattern=LinePattern.None,
-        fillColor={0, 0, 127},
-        fillPattern=FillPattern.Solid)}),
+      graphics={
+        Text(
+          extent={{-98, 100}, {-86, 84}},
+          lineColor={0, 0, 127},
+          textString="y"),
+        Text(
+          extent={{-104, 70}, {-70, 32}},
+          lineColor={0, 0, 127},
+          textString="TWB"),
+        Rectangle(
+          extent={{-100, 81}, {-70, 78}},
+          lineColor={0, 0, 255},
+          pattern=LinePattern.None,
+          fillColor={0, 0, 127},
+          fillPattern=FillPattern.Solid),
+        Text(
+          extent={{-54, 6}, {58,-114}},
+          lineColor={255, 255, 255},
+          fillColor={0, 127, 0},
+          fillPattern=FillPattern.Solid,
+          textString="Merkel"),
+        Ellipse(
+          extent={{-54, 62}, {0, 50}},
+          lineColor={255, 255, 255},
+          fillColor={255, 255, 255},
+          fillPattern=FillPattern.Solid),
+        Ellipse(
+          extent={{0, 62}, {54, 50}},
+          lineColor={255, 255, 255},
+          fillColor={255, 255, 255},
+          fillPattern=FillPattern.Solid),
+        Rectangle(
+          extent={{78, 82}, {100, 78}},
+          lineColor={0, 0, 255},
+          pattern=LinePattern.None,
+          fillColor={0, 0, 127},
+          fillPattern=FillPattern.Solid),
+        Rectangle(
+          extent={{70, 56}, {82, 52}},
+          lineColor={0, 0, 255},
+          pattern=LinePattern.None,
+          fillColor={0, 0, 127},
+          fillPattern=FillPattern.Solid),
+        Rectangle(
+          extent={{78, 54}, {82, 80}},
+          lineColor={0, 0, 255},
+          pattern=LinePattern.None,
+          fillColor={0, 0, 127},
+          fillPattern=FillPattern.Solid),
+        Text(
+          extent={{64, 114}, {98, 76}},
+          lineColor={0, 0, 127},
+          textString="PFan"),
+        Rectangle(
+          extent={{78,-60}, {82,-4}},
+          lineColor={0, 0, 255},
+          pattern=LinePattern.None,
+          fillColor={0, 0, 127},
+          fillPattern=FillPattern.Solid),
+        Text(
+          extent={{70,-58}, {104,-96}},
+          lineColor={0, 0, 127},
+          textString="TLvg"),
+        Rectangle(
+          extent={{78,-58}, {102,-62}},
+          lineColor={0, 0, 255},
+          pattern=LinePattern.None,
+          fillColor={0, 0, 127},
+          fillPattern=FillPattern.Solid)}),
     Diagram(
       coordinateSystem(
         preserveAspectRatio=false)),

@@ -1,3 +1,4 @@
+// Model copied from GeoJSON to Modelica Translator project (https://github.com/urbanopt/geojson-modelica-translator)
 within a_project.B5a6b99ec37f4de7f94020090;
 model building
   "n-zone RC building model based on URBANopt's use of TEASER export, with distribution pumps"
