@@ -1,3 +1,4 @@
+// Model copied from GeoJSON to Modelica Translator project (https://github.com/urbanopt/geojson-modelica-translator)
 within a_project.B5a6b99ec37f4de7f94020090;
 model building
   "n-zone RC building model based on URBANopt's use of TEASER export, with distribution pumps"
@@ -15,8 +16,7 @@ model building
      "Nominal building supply and return chilled water temperature difference";
 
   Buildings.Controls.OBC.CDL.Continuous.Sources.Constant minTSet[nZon](
-    k=fill(293.15,     nZon),
-    y(each final unit="K",    each displayUnit="degC"))
+    k=fill(293.15,     nZon),    y(each final unit="K",    each displayUnit="degC"))
     "Minimum temperature set point"
 
     annotation (Placement(transformation(extent={{-290,230},{-270,250}})));

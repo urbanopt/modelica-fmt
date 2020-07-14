@@ -5,17 +5,18 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 ## Running
 
 ```bash
-modelicafmt [-w] [-help] <sources>...
+modelica-fmt [-w] [-help] <sources>...
 Options:
   -w  overwrite source with formatted output. If flag is not present print to stdout
 Arguments:
   sources  one or more files or directories to format
 ```
 
-To run the example:
+To run the examples:
 
 ```bash
-./modelicafmt examples/gmt-building.mo > examples/gmt-building-out.mo
+./modelica-fmt examples/gmt-building.mo > examples/gmt-building-out.mo
+./modelica-fmt examples/gmt-coolingtower.mo > examples/gmt-coolingtower-out.mo
 ```
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
