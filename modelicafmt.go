@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	// lexer token types for comments
+	// lexer token types
 	commentTokenType     = 93
 	lineCommentTokenType = 94
+	identTokenType       = 89
 
 	// indent
 	spaceIndent = "  "
@@ -43,6 +44,41 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 		parser.INamed_argumentContext:
 		return 0 == l.inAnnotation || 0 < l.inModelAnnotation
 	case parser.IFunction_argumentContext:
+		if l.inModelAnnotation > 0 && len(l.modelAnnotationVectorStack) > 0 {
+			// Move up through rule's ancestors until we find the first `vector` ancestor
+			// We have to do it this way because the definition of `function_arguments`
+			// is left-recursive, otherwise we could just look up directly to the nth ancestor :'(
+			ancestors := antlr.TreesgetAncestors(rule)
+			i := len(ancestors) - 1
+		searchLoop:
+			for ; i >= 0; i-- {
+				ancestorRuleNode := ancestors[i].(antlr.RuleNode)
+				switch ancestorRuleNode.GetRuleContext().(type) {
+				case parser.IVectorContext:
+					// found it!
+					break searchLoop
+				case parser.IFunction_argumentsContext:
+					// recursive definition! keep on movin up
+					continue
+				default:
+					// found something else in our search (e.g. `named_arguments`),
+					// our vector indentation doesn't apply
+					i = -1
+					break
+				}
+			}
+
+			if i >= 0 {
+				// Found a `vector` ancestor! now check if it's the one that's
+				// at the top of our stack
+				ancestorInterval := ancestors[i].(antlr.SyntaxTree).GetSourceInterval()
+				vectorInterval := l.modelAnnotationVectorStack[len(l.modelAnnotationVectorStack)-1].GetSourceInterval()
+				if ancestorInterval.Start == vectorInterval.Start && ancestorInterval.Stop == vectorInterval.Stop {
+					return true
+				}
+			}
+		}
+
 		return 0 == l.inNamedArgument && 0 == l.inVector && (0 == l.inAnnotation || 0 < l.inModelAnnotation)
 	default:
 		return false
@@ -134,6 +170,35 @@ type modelicaListener struct {
 	previousTokenText            string        // text of previous token
 	previousTokenIdx             int           // index of previous token
 	commentTokens                []antlr.Token // stores comments to insert while writing
+
+	// modelAnnotationVectorStack is a stack which stores `vector` contexts,
+	// which is used for conditionally indenting vector children
+	// Specifically, a vector inside of a model annotation will have indented elements
+	// if that vector has one or more elements which are function calls, class modifications or similar
+	// (ie not if all elements are numbers, more vectors, etc)
+	//
+	// The last element of the slice is the first `vector` context ancestor whose `function_argument`s
+	// must be indented on new lines
+	// For example, we would like model annotations to look like this:
+	// annotation (
+	// 	Abc(
+	// 		paramA={
+	// 			SomeIdentifier(
+	// 				1,
+	// 				2),
+	//			123}))
+	//
+	// However, due to existing rules, we would end up with something like this
+	// annotation (
+	// 	Abc(
+	// 		paramA={SomeIdentifier(
+	// 			1,
+	// 			2), 123}))
+	//
+	// Thus by pushing/popping vectors we can check if a `function_argument` context
+	// should be indented or not by checking if the top of the stack is its ancestor
+	modelAnnotationVectorStack []antlr.RuleContext
+
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
 	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
@@ -289,10 +354,50 @@ func (l *modelicaListener) ExitModel_annotation(node *parser.Model_annotationCon
 
 func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
 	l.inVector++
+	if l.inModelAnnotation > 0 {
+		// Decide if this vector should be pushed onto our stack
+		// `function_arguments` rule is recursive, so we have to do some work to
+		// actually get the list of `function_argument`s
+		if node.GetChildCount() != 3 {
+			return
+		}
+		allFunctionArguments := []*parser.Function_argumentContext{}
+		functionArgumentsNode := node.GetChild(1)
+		for functionArgumentsNode != nil {
+			children := functionArgumentsNode.GetChildren()
+			functionArgumentsNode = nil
+			for _, child := range children {
+				switch child.(type) {
+				case *parser.Function_argumentContext:
+					allFunctionArguments = append(allFunctionArguments, child.(*parser.Function_argumentContext))
+				case *parser.Function_argumentsContext:
+					functionArgumentsNode = child.(*parser.Function_argumentsContext)
+				}
+			}
+		}
+
+		// check if there is an element of this vector which would require indentation
+		for _, functionArgument := range allFunctionArguments {
+			// implementation note: if first token of `function_argument` is
+			// IDENT (ie identifier), then this vector's contents should be indented
+			startToken := functionArgument.GetStart()
+			if startToken.GetTokenType() == identTokenType {
+				l.modelAnnotationVectorStack = append(l.modelAnnotationVectorStack, node)
+				break
+			}
+		}
+	}
 }
 
 func (l *modelicaListener) ExitVector(node *parser.VectorContext) {
 	l.inVector--
+	if len(l.modelAnnotationVectorStack) > 0 {
+		annotationVectorInterval := l.modelAnnotationVectorStack[len(l.modelAnnotationVectorStack)-1].GetSourceInterval()
+		thisVectorInterval := node.GetSourceInterval()
+		if annotationVectorInterval.Start == thisVectorInterval.Start && annotationVectorInterval.Stop == thisVectorInterval.Stop {
+			l.modelAnnotationVectorStack = l.modelAnnotationVectorStack[:len(l.modelAnnotationVectorStack)-1]
+		}
+	}
 }
 
 func (l *modelicaListener) EnterNamed_argument(node *parser.Named_argumentContext) {
@@ -343,7 +448,10 @@ func processFile(filename string, out io.Writer) error {
 	// quick runtime check for comment token types
 	// TODO: figure out how to statically ensure this condition
 	if lexer.SymbolicNames[commentTokenType] != "COMMENT" || lexer.SymbolicNames[lineCommentTokenType] != "LINE_COMMENT" {
-		panic("Comment or line comment token types do not match")
+		panic("Comment or line comment token types do not match - you may need to update the value according to ModelicLexer.tokens")
+	}
+	if lexer.SymbolicNames[identTokenType] != "IDENT" {
+		panic("IDENT token types do not match - you may need to update the value according to ModelicLexer.tokens")
 	}
 
 	// wrap the default lexer to collect comments and set it as the stream's source
