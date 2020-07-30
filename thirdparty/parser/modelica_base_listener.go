@@ -465,6 +465,18 @@ func (s *BaseModelicaListener) EnterVector(ctx *VectorContext) {}
 // ExitVector is called when production vector is exited.
 func (s *BaseModelicaListener) ExitVector(ctx *VectorContext) {}
 
+// EnterArray_arguments is called when production array_arguments is entered.
+func (s *BaseModelicaListener) EnterArray_arguments(ctx *Array_argumentsContext) {}
+
+// ExitArray_arguments is called when production array_arguments is exited.
+func (s *BaseModelicaListener) ExitArray_arguments(ctx *Array_argumentsContext) {}
+
+// EnterArray_iterator_constructor is called when production array_iterator_constructor is entered.
+func (s *BaseModelicaListener) EnterArray_iterator_constructor(ctx *Array_iterator_constructorContext) {}
+
+// ExitArray_iterator_constructor is called when production array_iterator_constructor is exited.
+func (s *BaseModelicaListener) ExitArray_iterator_constructor(ctx *Array_iterator_constructorContext) {}
+
 // EnterName is called when production name is entered.
 func (s *BaseModelicaListener) EnterName(ctx *NameContext) {}
 
