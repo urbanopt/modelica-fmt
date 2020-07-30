@@ -14,11 +14,6 @@ import (
 )
 
 const (
-	// lexer token types
-	commentTokenType     = 93
-	lineCommentTokenType = 94
-	identTokenType       = 89
-
 	// indent
 	spaceIndent = "  "
 )
@@ -72,6 +67,7 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 func insertSpaceBeforeToken(currentTokenText, previousTokenText string) bool {
 	switch currentTokenText {
 	case "(":
+		// add a space between 'annotation' and opening parens
 		if previousTokenText == "annotation" {
 			return true
 		}
@@ -260,7 +256,7 @@ func (l *modelicaListener) writeNewline() {
 func (l *modelicaListener) writeComment(comment antlr.Token) {
 	l.writeSpaceBefore(comment)
 	l.writer.WriteString(comment.GetText())
-	if comment.GetTokenType() == lineCommentTokenType {
+	if comment.GetTokenType() == parser.ModelicaLexerLINE_COMMENT {
 		l.writeNewline()
 	}
 }
@@ -350,7 +346,7 @@ func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
 				continue
 			}
 			startToken := expressionNode.GetStart()
-			if startToken.GetTokenType() == identTokenType {
+			if startToken.GetTokenType() == parser.ModelicaLexerIDENT {
 				l.modelAnnotationVectorStack = append(l.modelAnnotationVectorStack, node)
 				break
 			}
@@ -396,7 +392,7 @@ func (c *commentCollector) NextToken() antlr.Token {
 	token := c.TokenSource.NextToken()
 
 	tokenType := token.GetTokenType()
-	if tokenType == commentTokenType || tokenType == lineCommentTokenType {
+	if tokenType == parser.ModelicaLexerCOMMENT || tokenType == parser.ModelicaLexerLINE_COMMENT {
 		c.commentTokens = append(c.commentTokens, token)
 	}
 
@@ -413,15 +409,6 @@ func processFile(filename string, out io.Writer) error {
 	text := string(content)
 	inputStream := antlr.NewInputStream(text)
 	lexer := parser.NewModelicaLexer(inputStream)
-
-	// quick runtime check for comment token types
-	// TODO: figure out how to statically ensure this condition
-	if lexer.SymbolicNames[commentTokenType] != "COMMENT" || lexer.SymbolicNames[lineCommentTokenType] != "LINE_COMMENT" {
-		panic("Comment or line comment token types do not match - you may need to update the value according to ModelicLexer.tokens")
-	}
-	if lexer.SymbolicNames[identTokenType] != "IDENT" {
-		panic("IDENT token types do not match - you may need to update the value according to ModelicLexer.tokens")
-	}
 
 	// wrap the default lexer to collect comments and set it as the stream's source
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
