@@ -30,7 +30,7 @@ model Merkel
   replaceable parameter Buildings.Fluid.HeatExchangers.CoolingTowers.Data.UAMerkel UACor
     constrainedby Buildings.Fluid.HeatExchangers.CoolingTowers.Data.UAMerkel
     "Coefficients for UA correction"
-    annotation (Dialog(group="Heat transfer"), choicesAllMatching=true, Placement(transformation(extent={{18, 70}, {38, 90}})));
+    annotation (Dialog(group="Heat transfer"),choicesAllMatching=true,Placement(transformation(extent={{18,70},{38,90}})));
   parameter Real fraPFan_nominal(
     unit="W/(kg/s)")=275/0.15
     "Fan power divided by water mass flow rate at design condition"
@@ -46,11 +46,11 @@ model Merkel
     between forced and free convection regime)"
     annotation (Dialog(group="Fan"));
   replaceable parameter cha.fan fanRelPow(
-    r_V={0, 0.1, 0.3, 0.6, 1},
-    r_P={0, 0.1^3, 0.3^3, 0.6^3, 1})
+    r_V={0,0.1,0.3,0.6,1},
+    r_P={0,0.1^3,0.3^3,0.6^3,1})
     constrainedby cha.fan
     "Fan relative power consumption as a function of control signal, fanRelPow=P(y)/P(y=1)"
-    annotation (choicesAllMatching=true, Placement(transformation(extent={{58, 70}, {78, 90}})), Dialog(group="Fan"));
+    annotation (choicesAllMatching=true,Placement(transformation(extent={{58,70},{78,90}})),Dialog(group="Fan"));
   final parameter Modelica.SIunits.HeatFlowRate Q_flow_nominal(
     max=0)=per.Q_flow_nominal
     "Nominal heat transfer, (negative)";
@@ -66,11 +66,11 @@ model Merkel
     final unit="K",
     displayUnit="degC")
     "Entering air wet bulb temperature"
-    annotation (Placement(transformation(extent={{-140, 20}, {-100, 60}})));
+    annotation (Placement(transformation(extent={{-140,20},{-100,60}})));
   Modelica.Blocks.Interfaces.RealInput y(
     unit="1")
     "Fan control signal"
-    annotation (Placement(transformation(extent={{-140, 60}, {-100, 100}})));
+    annotation (Placement(transformation(extent={{-140,60},{-100,100}})));
   Modelica.Blocks.Interfaces.RealOutput PFan(
     final quantity="Power",
     final unit="W")=Buildings.Utilities.Math.Functions.spliceFunction(
@@ -82,7 +82,7 @@ model Merkel
     x=y-yMin+yMin/20,
     deltax=yMin/20)
     "Electric power consumed by fan"
-    annotation (Placement(transformation(extent={{100, 70}, {120, 90}}), iconTransformation(extent={{100, 70}, {120, 90}})));
+    annotation (Placement(transformation(extent={{100,70},{120,90}}),iconTransformation(extent={{100,70},{120,90}})));
 protected
   final parameter Real fanRelPowDer[size(
     fanRelPow.r_V,
@@ -101,11 +101,11 @@ protected
         h=inStream(port_a.h_outflow),
         X=inStream(port_a.Xi_outflow))))
     "Water inlet temperature"
-    annotation (Placement(transformation(extent={{-70, 36}, {-50, 54}})));
+    annotation (Placement(transformation(extent={{-70,36},{-50,54}})));
   Modelica.Blocks.Sources.RealExpression mWat_flow(
     final y=port_a.m_flow)
     "Water mass flow rate"
-    annotation (Placement(transformation(extent={{-70, 20}, {-50, 38}})));
+    annotation (Placement(transformation(extent={{-70,20},{-50,38}})));
   Buildings.Fluid.HeatExchangers.CoolingTowers.BaseClasses.Merkel per(
     redeclare final package Medium=Medium,
     final m_flow_nominal=m_flow_nominal,
@@ -117,7 +117,7 @@ protected
     final UACor=UACor,
     final yMin=yMin)
     "Model for thermal performance"
-    annotation (Placement(transformation(extent={{-20, 40}, {0, 60}})));
+    annotation (Placement(transformation(extent={{-20,40},{0,60}})));
 initial equation
   // Check validity of relative fan power consumption at y=yMin and y=1
   assert(
@@ -142,88 +142,88 @@ initial equation
         r_V=1,
         d=fanRelPowDer))+"\n   You need to choose different values for the parameter fanRelPow."+"\n   To increase the fan power, change fraPFan_nominal or PFan_nominal.");
 equation
-  connect(per.y, y)
-    annotation (Line(points={{-22, 58}, {-40, 58}, {-40, 80}, {-120, 80}}, color={0, 0, 127}));
-  connect(per.TAir, TAir)
-    annotation (Line(points={{-22, 54}, {-80, 54}, {-80, 40}, {-120, 40}}, color={0, 0, 127}));
-  connect(per.Q_flow, preHea.Q_flow)
-    annotation (Line(points={{1, 50}, {12, 50}, {12, 12}, {-80, 12}, {-80,-60}, {-40,-60}}, color={0, 0, 127}));
-  connect(per.m_flow, mWat_flow.y)
-    annotation (Line(points={{-22, 42}, {-34, 42}, {-34, 29}, {-49, 29}}, color={0, 0, 127}));
-  connect(TWatIn.y, per.TWatIn)
-    annotation (Line(points={{-49, 45}, {-40, 45}, {-40, 46}, {-22, 46}}, color={0, 0, 127}));
+  connect(per.y,y)
+    annotation (Line(points={{-22,58},{-40,58},{-40,80},{-120,80}},color={0,0,127}));
+  connect(per.TAir,TAir)
+    annotation (Line(points={{-22,54},{-80,54},{-80,40},{-120,40}},color={0,0,127}));
+  connect(per.Q_flow,preHea.Q_flow)
+    annotation (Line(points={{1,50},{12,50},{12,12},{-80,12},{-80,-60},{-40,-60}},color={0,0,127}));
+  connect(per.m_flow,mWat_flow.y)
+    annotation (Line(points={{-22,42},{-34,42},{-34,29},{-49,29}},color={0,0,127}));
+  connect(TWatIn.y,per.TWatIn)
+    annotation (Line(points={{-49,45},{-40,45},{-40,46},{-22,46}},color={0,0,127}));
   annotation (
     Icon(
       coordinateSystem(
         preserveAspectRatio=false),
       graphics={
         Text(
-          extent={{-98, 100}, {-86, 84}},
-          lineColor={0, 0, 127},
+          extent={{-98,100},{-86,84}},
+          lineColor={0,0,127},
           textString="y"),
         Text(
-          extent={{-104, 70}, {-70, 32}},
-          lineColor={0, 0, 127},
+          extent={{-104,70},{-70,32}},
+          lineColor={0,0,127},
           textString="TWB"),
         Rectangle(
-          extent={{-100, 81}, {-70, 78}},
-          lineColor={0, 0, 255},
+          extent={{-100,81},{-70,78}},
+          lineColor={0,0,255},
           pattern=LinePattern.None,
-          fillColor={0, 0, 127},
+          fillColor={0,0,127},
           fillPattern=FillPattern.Solid),
         Text(
-          extent={{-54, 6}, {58,-114}},
-          lineColor={255, 255, 255},
-          fillColor={0, 127, 0},
+          extent={{-54,6},{58,-114}},
+          lineColor={255,255,255},
+          fillColor={0,127,0},
           fillPattern=FillPattern.Solid,
           textString="Merkel"),
         Ellipse(
-          extent={{-54, 62}, {0, 50}},
-          lineColor={255, 255, 255},
-          fillColor={255, 255, 255},
+          extent={{-54,62},{0,50}},
+          lineColor={255,255,255},
+          fillColor={255,255,255},
           fillPattern=FillPattern.Solid),
         Ellipse(
-          extent={{0, 62}, {54, 50}},
-          lineColor={255, 255, 255},
-          fillColor={255, 255, 255},
+          extent={{0,62},{54,50}},
+          lineColor={255,255,255},
+          fillColor={255,255,255},
           fillPattern=FillPattern.Solid),
         Rectangle(
-          extent={{78, 82}, {100, 78}},
-          lineColor={0, 0, 255},
+          extent={{78,82},{100,78}},
+          lineColor={0,0,255},
           pattern=LinePattern.None,
-          fillColor={0, 0, 127},
+          fillColor={0,0,127},
           fillPattern=FillPattern.Solid),
         Rectangle(
-          extent={{70, 56}, {82, 52}},
-          lineColor={0, 0, 255},
+          extent={{70,56},{82,52}},
+          lineColor={0,0,255},
           pattern=LinePattern.None,
-          fillColor={0, 0, 127},
+          fillColor={0,0,127},
           fillPattern=FillPattern.Solid),
         Rectangle(
-          extent={{78, 54}, {82, 80}},
-          lineColor={0, 0, 255},
+          extent={{78,54},{82,80}},
+          lineColor={0,0,255},
           pattern=LinePattern.None,
-          fillColor={0, 0, 127},
+          fillColor={0,0,127},
           fillPattern=FillPattern.Solid),
         Text(
-          extent={{64, 114}, {98, 76}},
-          lineColor={0, 0, 127},
+          extent={{64,114},{98,76}},
+          lineColor={0,0,127},
           textString="PFan"),
         Rectangle(
-          extent={{78,-60}, {82,-4}},
-          lineColor={0, 0, 255},
+          extent={{78,-60},{82,-4}},
+          lineColor={0,0,255},
           pattern=LinePattern.None,
-          fillColor={0, 0, 127},
+          fillColor={0,0,127},
           fillPattern=FillPattern.Solid),
         Text(
-          extent={{70,-58}, {104,-96}},
-          lineColor={0, 0, 127},
+          extent={{70,-58},{104,-96}},
+          lineColor={0,0,127},
           textString="TLvg"),
         Rectangle(
-          extent={{78,-58}, {102,-62}},
-          lineColor={0, 0, 255},
+          extent={{78,-58},{102,-62}},
+          lineColor={0,0,255},
           pattern=LinePattern.None,
-          fillColor={0, 0, 127},
+          fillColor={0,0,127},
           fillPattern=FillPattern.Solid)}),
     Diagram(
       coordinateSystem(

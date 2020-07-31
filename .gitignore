@@ -2,6 +2,7 @@
 .idea/
 .antlr/
 dist/
+test_output/
 
 modelicafmt
 modelica-fmt

@@ -230,6 +230,12 @@ type ModelicaListener interface {
 	// EnterVector is called when entering the vector production.
 	EnterVector(c *VectorContext)
 
+	// EnterArray_arguments is called when entering the array_arguments production.
+	EnterArray_arguments(c *Array_argumentsContext)
+
+	// EnterArray_iterator_constructor is called when entering the array_iterator_constructor production.
+	EnterArray_iterator_constructor(c *Array_iterator_constructorContext)
+
 	// EnterName is called when entering the name production.
 	EnterName(c *NameContext)
 
@@ -493,6 +499,12 @@ type ModelicaListener interface {
 
 	// ExitVector is called when exiting the vector production.
 	ExitVector(c *VectorContext)
+
+	// ExitArray_arguments is called when exiting the array_arguments production.
+	ExitArray_arguments(c *Array_argumentsContext)
+
+	// ExitArray_iterator_constructor is called when exiting the array_iterator_constructor production.
+	ExitArray_iterator_constructor(c *Array_iterator_constructorContext)
 
 	// ExitName is called when exiting the name production.
 	ExitName(c *NameContext)

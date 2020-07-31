@@ -358,7 +358,17 @@ primary
 
 // added to original file
 vector
-   : '{' function_arguments '}'
+   : '{' (array_arguments | array_iterator_constructor) '}'
+   ;
+
+// added to original file
+array_arguments
+   : expression (',' expression)*
+   ;
+
+// added to original file
+array_iterator_constructor
+   : expression 'for' for_indices
    ;
 
 name
