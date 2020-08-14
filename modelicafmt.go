@@ -423,5 +423,13 @@ func processFile(filename string, out io.Writer) error {
 	defer listener.close()
 
 	antlr.ParseTreeWalkerDefault.Walk(listener, sd)
+	// add any remaining comments and handle newline at end of file
+	for _, comment := range listener.commentTokens {
+		listener.writeComment(comment)
+	}
+	if !listener.onNewLine {
+		listener.writeNewline()
+	}
+
 	return nil
 }
