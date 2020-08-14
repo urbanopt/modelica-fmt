@@ -222,3 +222,4 @@ First implementation.
 </ul>
 </html>"));
 end building;
+/* trailing comment */
