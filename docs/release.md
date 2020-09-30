@@ -12,3 +12,5 @@ Next, push the tag up to remote, triggering a Travis build which runs GoReleaser
 ```bash
 git push origin v<version>
 ```
+
+After the build successfully finishes on Travis, go to the releases page on Github, check that it looks good, and publish it.
