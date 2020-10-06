@@ -16,7 +16,13 @@ import (
 )
 
 var (
-	write = flag.Bool("w", false, "overwrite the file(s)")
+	write       = flag.Bool("w", false, "overwrite the file(s)")
+	versionFlag = flag.Bool("v", false, "display tool version")
+	// build information added by goreleaser
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
 )
 
 func usage() {
@@ -65,6 +71,10 @@ func walkDir(path string) {
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+	if *versionFlag {
+		fmt.Printf("modelicafmt v%s (SHA %s)\nBuilt %s by %s\n", version, commit, date, builtBy)
+		return
+	}
 	if flag.NArg() == 0 {
 		fmt.Fprintln(os.Stderr, "error: must provide at least one file or directory")
 		os.Exit(2)
