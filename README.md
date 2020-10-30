@@ -43,9 +43,16 @@ See https://pre-commit.com/ for more information about the framework.
 
 ## Building
 
+Install dependencies on OS X with
 ```bash
 brew install go
-
+```
+or on Linux from the repository root directory with
+```bash
+sudo go get -d ./...
+```
+Build with
+```bash
 # in the repository root directory
 go build -o modelicafmt
 ```
