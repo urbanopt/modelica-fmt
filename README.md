@@ -44,7 +44,12 @@ See https://pre-commit.com/ for more information about the framework.
 ## Building
 
 ```bash
+# install go with brew, or follow instructions here: https://golang.org/doc/install
 brew install go
+
+# if you have an older version of the go tool, you may need to explicitly
+# download the dependencies (in repo root directory)
+go get -d ./...
 
 # in the repository root directory
 go build -o modelicafmt
