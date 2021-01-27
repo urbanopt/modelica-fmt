@@ -77,6 +77,7 @@ func main() {
 	}
 	if flag.NArg() == 0 {
 		fmt.Fprintln(os.Stderr, "error: must provide at least one file or directory")
+		usage()
 		os.Exit(2)
 	}
 
