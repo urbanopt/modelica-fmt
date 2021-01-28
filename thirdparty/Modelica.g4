@@ -82,8 +82,17 @@ language_specification
    : STRING
    ;
 
+// changed from original file
 external_function_call
-   : (component_reference '=')? IDENT '(' (expression_list)? ')'
+   : (component_reference '=')? IDENT '(' (external_function_call_args)? ')'
+   ;
+
+external_function_call_args
+   : external_function_call_argument (',' external_function_call_argument)*
+   ;
+
+external_function_call_argument
+   : expression
    ;
 
 element_list

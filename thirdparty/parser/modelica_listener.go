@@ -50,6 +50,12 @@ type ModelicaListener interface {
 	// EnterExternal_function_call is called when entering the external_function_call production.
 	EnterExternal_function_call(c *External_function_callContext)
 
+	// EnterExternal_function_call_args is called when entering the external_function_call_args production.
+	EnterExternal_function_call_args(c *External_function_call_argsContext)
+
+	// EnterExternal_function_call_argument is called when entering the external_function_call_argument production.
+	EnterExternal_function_call_argument(c *External_function_call_argumentContext)
+
 	// EnterElement_list is called when entering the element_list production.
 	EnterElement_list(c *Element_listContext)
 
@@ -319,6 +325,12 @@ type ModelicaListener interface {
 
 	// ExitExternal_function_call is called when exiting the external_function_call production.
 	ExitExternal_function_call(c *External_function_callContext)
+
+	// ExitExternal_function_call_args is called when exiting the external_function_call_args production.
+	ExitExternal_function_call_args(c *External_function_call_argsContext)
+
+	// ExitExternal_function_call_argument is called when exiting the external_function_call_argument production.
+	ExitExternal_function_call_argument(c *External_function_call_argumentContext)
 
 	// ExitElement_list is called when exiting the element_list production.
 	ExitElement_list(c *Element_listContext)
