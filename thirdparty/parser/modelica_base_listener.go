@@ -105,6 +105,18 @@ func (s *BaseModelicaListener) EnterExternal_function_call(ctx *External_functio
 // ExitExternal_function_call is called when production external_function_call is exited.
 func (s *BaseModelicaListener) ExitExternal_function_call(ctx *External_function_callContext) {}
 
+// EnterExternal_function_call_args is called when production external_function_call_args is entered.
+func (s *BaseModelicaListener) EnterExternal_function_call_args(ctx *External_function_call_argsContext) {}
+
+// ExitExternal_function_call_args is called when production external_function_call_args is exited.
+func (s *BaseModelicaListener) ExitExternal_function_call_args(ctx *External_function_call_argsContext) {}
+
+// EnterExternal_function_call_argument is called when production external_function_call_argument is entered.
+func (s *BaseModelicaListener) EnterExternal_function_call_argument(ctx *External_function_call_argumentContext) {}
+
+// ExitExternal_function_call_argument is called when production external_function_call_argument is exited.
+func (s *BaseModelicaListener) ExitExternal_function_call_argument(ctx *External_function_call_argumentContext) {}
+
 // EnterElement_list is called when production element_list is entered.
 func (s *BaseModelicaListener) EnterElement_list(ctx *Element_listContext) {}
 

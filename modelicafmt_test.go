@@ -32,6 +32,7 @@ var exampleFileTests = []struct {
 }{
 	{"gmt-building.mo", "gmt-building-out.mo"},
 	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo"},
+	{"functions.mo", "functions-out.mo"},
 }
 
 func TestFormattingExamples(t *testing.T) {

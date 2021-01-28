@@ -30,7 +30,8 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 		parser.IExpression_listContext,
 		parser.IConstraining_clauseContext,
 		parser.IIf_expressionContext,
-		parser.IIf_expression_bodyContext:
+		parser.IIf_expression_bodyContext,
+		parser.IExternal_function_call_argumentContext:
 		return true
 	case parser.IString_commentContext:
 		return 0 == l.inAnnotation
