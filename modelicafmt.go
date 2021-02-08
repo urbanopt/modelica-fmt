@@ -122,6 +122,13 @@ var (
 		"-", "+", "^", "*", "/",
 		":", // array range constructor
 	}
+
+	allowBreakAfterTokens = []string{
+		"=",
+		",",
+		"(",
+		"{",
+	}
 )
 
 // tokenInGroup returns true if a token is in a given list
@@ -151,6 +158,7 @@ type modelicaListener struct {
 	previousTokenText            string        // text of previous token
 	previousTokenIdx             int           // index of previous token
 	commentTokens                []antlr.Token // stores comments to insert while writing
+	currentLineLength            int           // length of the line up to the writing position
 
 	// modelAnnotationVectorStack is a stack which stores `vector` contexts,
 	// which is used for conditionally indenting vector children
@@ -202,6 +210,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
 		previousTokenText:    "",
 		previousTokenIdx:     -1,
 		commentTokens:        commentTokens,
+		currentLineLength:    0,
 	}
 }
 
@@ -247,34 +256,77 @@ func (l *modelicaListener) maybeDedent() {
 	l.indentationStack = l.indentationStack[:len(l.indentationStack)-1]
 }
 
+// writeString writes a string to the listener's output
+// It should serve as the main entrypoint to writing to the output
+func (l *modelicaListener) writeString(str string) {
+	originalSpacePrefix := l.getSpaceBefore(str, true)
+	charsOnFirstLine := len(originalSpacePrefix)
+	firstNewlineIndex := strings.Index(str, "\n")
+	if firstNewlineIndex < 0 {
+		charsOnFirstLine += len(str)
+	} else {
+		charsOnFirstLine += firstNewlineIndex
+	}
+
+	// break the line if writing this string would make it too long and the previous token is breakable
+	var actualSpacePrefix string
+	if l.currentLineLength+charsOnFirstLine > 80 && tokenInGroup(l.previousTokenText, allowBreakAfterTokens) {
+		l.writeNewline()
+		l.maybeIndent()
+		actualSpacePrefix = l.getSpaceBefore(str, false)
+		l.writer.WriteString(actualSpacePrefix + str)
+		l.maybeDedent()
+	} else {
+		actualSpacePrefix = l.getSpaceBefore(str, false)
+		l.writer.WriteString(actualSpacePrefix + str)
+	}
+
+	lastNewlineIndex := strings.LastIndex(str, "\n")
+	var charsOnLastLine int
+	if lastNewlineIndex < 0 {
+		charsOnLastLine = len(actualSpacePrefix) + len(str)
+	} else {
+		// since there was a newline, no need to add the space prefix to the count
+		charsOnLastLine = len(str) - (lastNewlineIndex + 1)
+	}
+	l.currentLineLength += charsOnLastLine
+}
+
 func (l *modelicaListener) writeNewline() {
+	// explicitly not using l.writeString here b/c it's not necessary and I think we could end up in infinite recursion (though really unlikely)
 	l.writer.WriteString("\n")
 	l.onNewLine = true
+	l.currentLineLength = 0
 
 	// WARNING: this is coupled with maybeIndent, which uses this state
 	l.lineIndentIncreased = false
 }
 
 func (l *modelicaListener) writeComment(comment antlr.Token) {
-	l.writeSpaceBefore(comment)
-	l.writer.WriteString(comment.GetText())
+	l.writeString(comment.GetText())
 	if comment.GetTokenType() == parser.ModelicaLexerLINE_COMMENT {
 		l.writeNewline()
 	}
 }
 
-func (l *modelicaListener) writeSpaceBefore(token antlr.Token) {
+// getSpaceBefore returns whitespace that should prefix the string. Note that this can modify the listener state
+// If dryRun is true, the function will NOT modify the listener state (useful for predicting what the space will be)
+func (l *modelicaListener) getSpaceBefore(str string, dryRun bool) string {
 	if l.onNewLine {
+		if !dryRun {
+			l.onNewLine = false
+		}
+
 		// insert indentation
 		if l.indentation() > 0 {
 			indentation := l.indentation()
-			l.writer.WriteString(strings.Repeat(spaceIndent, indentation))
+			return strings.Repeat(spaceIndent, indentation)
 		}
-		l.onNewLine = false
-	} else if insertSpaceBeforeToken(token.GetText(), l.previousTokenText) {
+	} else if insertSpaceBeforeToken(str, l.previousTokenText) {
 		// insert a space
-		l.writer.WriteString(" ")
+		return " "
 	}
+	return ""
 }
 
 func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
@@ -286,9 +338,7 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 		l.writeComment(commentToken)
 	}
 
-	l.writeSpaceBefore(node.GetSymbol())
-
-	l.writer.WriteString(node.GetText())
+	l.writeString(node.GetText())
 
 	if node.GetText() == ";" {
 		l.writeNewline()
