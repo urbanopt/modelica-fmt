@@ -119,8 +119,8 @@ equation
       color={255,204,51},thickness=0.5),Text(string="%first",index=-1,extent={{6,
       3},{6,3}},horizontalAlignment=TextAlignment.Left));
   connect(terUni[0+1].heaPorCon,meeting.port_a)
-    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={
-      191,0,0}));
+    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={191,
+      0,0}));
   connect(terUni[0+1].heaPorRad,meeting.port_a)
     annotation (Line(points={{-186.667,-50},{-90,-50},{-90,0}},color={191,0,0}));
   connect(weaBus,floor.weaBus)
@@ -128,8 +128,8 @@ equation
       color={255,204,51},thickness=0.5),Text(string="%first",index=-1,extent={{6,
       3},{6,3}},horizontalAlignment=TextAlignment.Left));
   connect(terUni[1+1].heaPorCon,floor.port_a)
-    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={
-      191,0,0}));
+    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={191,
+      0,0}));
   connect(terUni[1+1].heaPorRad,floor.port_a)
     annotation (Line(points={{-186.667,-50},{-90,-50},{-90,0}},color={191,0,0}));
   connect(weaBus,storage.weaBus)
@@ -137,8 +137,8 @@ equation
       color={255,204,51},thickness=0.5),Text(string="%first",index=-1,extent={{6,
       3},{6,3}},horizontalAlignment=TextAlignment.Left));
   connect(terUni[2+1].heaPorCon,storage.port_a)
-    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={
-      191,0,0}));
+    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={191,
+      0,0}));
   connect(terUni[2+1].heaPorRad,storage.port_a)
     annotation (Line(points={{-186.667,-50},{-90,-50},{-90,0}},color={191,0,0}));
   connect(weaBus,office.weaBus)
@@ -146,8 +146,8 @@ equation
       color={255,204,51},thickness=0.5),Text(string="%first",index=-1,extent={{6,
       3},{6,3}},horizontalAlignment=TextAlignment.Left));
   connect(terUni[3+1].heaPorCon,office.port_a)
-    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={
-      191,0,0}));
+    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={191,
+      0,0}));
   connect(terUni[3+1].heaPorRad,office.port_a)
     annotation (Line(points={{-186.667,-50},{-90,-50},{-90,0}},color={191,0,0}));
   connect(weaBus,restroom.weaBus)
@@ -155,8 +155,8 @@ equation
       color={255,204,51},thickness=0.5),Text(string="%first",index=-1,extent={{6,
       3},{6,3}},horizontalAlignment=TextAlignment.Left));
   connect(terUni[4+1].heaPorCon,restroom.port_a)
-    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={
-      191,0,0}));
+    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={191,
+      0,0}));
   connect(terUni[4+1].heaPorRad,restroom.port_a)
     annotation (Line(points={{-186.667,-50},{-90,-50},{-90,0}},color={191,0,0}));
   connect(weaBus,ict.weaBus)
@@ -164,8 +164,8 @@ equation
       color={255,204,51},thickness=0.5),Text(string="%first",index=-1,extent={{6,
       3},{6,3}},horizontalAlignment=TextAlignment.Left));
   connect(terUni[5+1].heaPorCon,ict.port_a)
-    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={
-      191,0,0}));
+    annotation (Line(points={{-193.333,-50},{-192,-50},{-192,0},{-90,0}},color={191,
+      0,0}));
   connect(terUni[5+1].heaPorRad,ict.port_a)
     annotation (Line(points={{-186.667,-50},{-90,-50},{-90,0}},color={191,0,0}));
   connect(terUni.mReqHeaWat_flow,disFloHea.mReq_flow)
@@ -186,8 +186,8 @@ equation
     annotation (Line(points={{-119,-96},{223.5,-96},{223.5,280},{320,280}},color=
       {0,0,127}));
   connect(disFloCoo.QActTot_flow,QCoo_flow)
-    annotation (Line(points={{-119,-156},{230,-156},{230,240},{320,240}},color={
-      0,0,127}));
+    annotation (Line(points={{-119,-156},{230,-156},{230,240},{320,240}},color={0,
+      0,127}));
   connect(maxTSet.y,terUni.TSetCoo)
     annotation (Line(points={{-268,200},{-240,200},{-240,-46.6667},{-200.833,-46.6667}},
       color={0,0,127}));
