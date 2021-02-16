@@ -157,6 +157,7 @@ type modelicaListener struct {
 	previousTokenText            string        // text of previous token
 	previousTokenIdx             int           // index of previous token
 	commentTokens                []antlr.Token // stores comments to insert while writing
+	maxLineLength                int           // configuration for num charaters per line
 	currentLineLength            int           // length of the line up to the writing position
 
 	// modelAnnotationVectorStack is a stack which stores `vector` contexts,
@@ -196,7 +197,7 @@ type modelicaListener struct {
 	inVector          int // counts number of current or ancestor contexts that are vector
 }
 
-func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
+func newListener(out io.Writer, commentTokens []antlr.Token, maxLineLength int) *modelicaListener {
 	return &modelicaListener{
 		BaseModelicaListener: &parser.BaseModelicaListener{},
 		writer:               bufio.NewWriter(out),
@@ -210,6 +211,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token) *modelicaListener {
 		previousTokenIdx:     -1,
 		commentTokens:        commentTokens,
 		currentLineLength:    0,
+		maxLineLength:        maxLineLength,
 	}
 }
 
@@ -269,7 +271,10 @@ func (l *modelicaListener) writeString(str string) {
 
 	// break the line if writing this string would make it too long and the previous token is breakable
 	var actualSpacePrefix string
-	if l.currentLineLength+charsOnFirstLine > 80 && tokenInGroup(l.previousTokenText, allowBreakAfterTokens) {
+	if l.maxLineLength > 0 &&
+		l.currentLineLength+charsOnFirstLine > l.maxLineLength &&
+		tokenInGroup(l.previousTokenText, allowBreakAfterTokens) {
+
 		l.writeNewline()
 		l.maybeIndent()
 		actualSpacePrefix = l.getSpaceBefore(str, false)
@@ -451,7 +456,7 @@ func (c *commentCollector) NextToken() antlr.Token {
 }
 
 // processFile formats a file
-func processFile(filename string, out io.Writer) error {
+func processFile(filename string, out io.Writer, maxLineLength int) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -469,7 +474,7 @@ func processFile(filename string, out io.Writer) error {
 	p := parser.NewModelicaParser(stream)
 	sd := p.Stored_definition()
 
-	listener := newListener(out, tokenSource.commentTokens)
+	listener := newListener(out, tokenSource.commentTokens, maxLineLength)
 	defer listener.close()
 
 	antlr.ParseTreeWalkerDefault.Walk(listener, sd)

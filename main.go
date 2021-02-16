@@ -18,6 +18,7 @@ import (
 var (
 	write       = flag.Bool("w", false, "overwrite the file(s)")
 	versionFlag = flag.Bool("v", false, "display tool version")
+	lineLength  = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
 	// build information added by goreleaser
 	version = "dev"
 	commit  = "none"
@@ -37,7 +38,7 @@ func isModelicaFile(f os.FileInfo) bool {
 
 func processAndWriteFile(filename string) {
 	var b bytes.Buffer
-	err := processFile(filename, bufio.NewWriter(&b))
+	err := processFile(filename, bufio.NewWriter(&b), *lineLength)
 	if err != nil {
 		panic(err)
 	}
