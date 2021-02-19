@@ -29,10 +29,12 @@ func diffFiles(a, b string) (string, error) {
 var exampleFileTests = []struct {
 	sourceFile string
 	outFile    string
+	lineLength int
 }{
-	{"gmt-building.mo", "gmt-building-out.mo"},
-	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo"},
-	{"functions.mo", "functions-out.mo"},
+	{"gmt-building.mo", "gmt-building-out.mo", -1},
+	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", -1},
+	{"functions.mo", "functions-out.mo", -1},
+	{"gmt-building.mo", "gmt-building-80-out.mo", 80},
 }
 
 func TestFormattingExamples(t *testing.T) {
@@ -48,7 +50,7 @@ func TestFormattingExamples(t *testing.T) {
 			defer file.Close()
 
 			// Act
-			err = processFile(testSourceFile, file)
+			err = processFile(testSourceFile, file, testCase.lineLength)
 
 			// Assert
 			a.NoError(err)
