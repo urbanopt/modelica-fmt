@@ -5,4 +5,6 @@ dist/
 test_output/
 
 modelicafmt
+modelicafmt.exe
 modelica-fmt
+modelica-fmt.exe
