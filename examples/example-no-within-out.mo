@@ -1,4 +1,3 @@
-within Somewhere;
 class MyClass
   "Class to demo function definitions"
   extends Modelica.Icons.BasesPackage;

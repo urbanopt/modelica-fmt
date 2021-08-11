@@ -31,9 +31,11 @@ var exampleFileTests = []struct {
 	outFile    string
 	lineLength int
 }{
-	{"gmt-building.mo", "gmt-building-out.mo", -1},
 	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", -1},
 	{"functions.mo", "functions-out.mo", -1},
+	{"example-no-within.mo", "example-no-within-out.mo", -1},
+	{"example-arrays.mo", "example-arrays-out.mo", -1},
+	{"gmt-building.mo", "gmt-building-out.mo", -1},
 	{"gmt-building.mo", "gmt-building-80-out.mo", 80},
 }
 

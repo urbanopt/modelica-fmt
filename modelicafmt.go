@@ -153,6 +153,8 @@ type modelicaListener struct {
 	writer                       *bufio.Writer // writing destination
 	indentationStack             []indent      // a stack used for tracking rendered and ignored indentations
 	onNewLine                    bool          // true when write position succeeds a newline character
+	withinOnCurrentLine          bool          // true when `within` statement is found on the current line
+	insideBracket                bool          // true when inside brackets (i.e. `[]`)
 	lineIndentIncreased          bool          // true when the indentation level has already been increased for a line
 	previousTokenText            string        // text of previous token
 	previousTokenIdx             int           // index of previous token
@@ -202,6 +204,8 @@ func newListener(out io.Writer, commentTokens []antlr.Token, maxLineLength int) 
 		BaseModelicaListener: &parser.BaseModelicaListener{},
 		writer:               bufio.NewWriter(out),
 		onNewLine:            true,
+		withinOnCurrentLine:  false,
+		insideBracket:        false,
 		lineIndentIncreased:  false,
 		inAnnotation:         0,
 		inModelAnnotation:    0,
@@ -344,8 +348,26 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 
 	l.writeString(node.GetText())
 
+	if l.previousTokenText == "within" {
+		l.withinOnCurrentLine = true
+	}
+
+	if l.previousTokenText == "[" {
+		l.insideBracket = true
+	} else if l.previousTokenText == "]" {
+		l.insideBracket = false
+	}
+
 	if node.GetText() == ";" {
 		l.writeNewline()
+
+		// only insert a blank line if there's no `within` on current line,
+		// and we're outside of brackets
+		if !l.withinOnCurrentLine && !l.insideBracket {
+			l.writeNewline()
+		} else {
+			l.withinOnCurrentLine = false
+		}
 	}
 
 	l.previousTokenText = node.GetText()
