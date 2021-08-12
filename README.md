@@ -52,6 +52,10 @@ brew install go
 go get -d ./...
 
 # in the repository root directory
+go build .
+
+# optionally, with `-o` you can specify a custom name for your executable
+# (on Windows remember to add `.exe` to the name)
 go build -o modelicafmt
 ```
 
