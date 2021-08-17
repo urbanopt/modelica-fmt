@@ -31,4 +31,3 @@ class MyClass
   end destructor;
 
 end MyClass;
-

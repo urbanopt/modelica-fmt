@@ -35,4 +35,3 @@ class MyClass
     annotation (Dialog(group="Fan"));
 
 end MyClass;
-
