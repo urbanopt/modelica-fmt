@@ -193,10 +193,11 @@ type modelicaListener struct {
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
 	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
-	inAnnotation      int // counts number of current or ancestor contexts that are annotation rule
-	inModelAnnotation int // counts number of current or ancestor contexts that are model annotation rule
-	inNamedArgument   int // counts number of current or ancestor contexts that are named argument
-	inVector          int // counts number of current or ancestor contexts that are vector
+	inAnnotation      int  // counts number of current or ancestor contexts that are annotation rule
+	inModelAnnotation int  // counts number of current or ancestor contexts that are model annotation rule
+	inNamedArgument   int  // counts number of current or ancestor contexts that are named argument
+	inVector          int  // counts number of current or ancestor contexts that are vector
+	inLastSemicolon   bool // true if the listener is handling the last_semicolon rule
 }
 
 func newListener(out io.Writer, commentTokens []antlr.Token, maxLineLength int) *modelicaListener {
@@ -207,6 +208,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token, maxLineLength int) 
 		withinOnCurrentLine:  false,
 		insideBracket:        false,
 		lineIndentIncreased:  false,
+		inLastSemicolon:      false,
 		inAnnotation:         0,
 		inModelAnnotation:    0,
 		inVector:             0,
@@ -337,6 +339,21 @@ func (l *modelicaListener) getSpaceBefore(str string, dryRun bool) string {
 	return ""
 }
 
+// insertBlankLine returns true if an empty line should be inserted
+// Used when visiting a terminal semicolon (ie ';')
+func (l *modelicaListener) insertBlankLine() bool {
+	// if at the end of the file (ie the last semicolon) only insert an extra
+	// line if there are comments remaining which will be appended at the end of
+	// the file
+	if l.inLastSemicolon {
+		return len(l.commentTokens) > 0
+	}
+
+	// only insert a blank line if there's no `within` on current line,
+	// and we're outside of brackets
+	return !l.withinOnCurrentLine && !l.insideBracket
+}
+
 func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 	// if there's a comment that should go before this node, insert it first
 	tokenIdx := node.GetSymbol().GetTokenIndex()
@@ -361,9 +378,7 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 	if node.GetText() == ";" {
 		l.writeNewline()
 
-		// only insert a blank line if there's no `within` on current line,
-		// and we're outside of brackets
-		if !l.withinOnCurrentLine && !l.insideBracket {
+		if l.insertBlankLine() {
 			l.writeNewline()
 		} else {
 			l.withinOnCurrentLine = false
@@ -449,6 +464,14 @@ func (l *modelicaListener) EnterNamed_argument(node *parser.Named_argumentContex
 
 func (l *modelicaListener) ExitNamed_argument(node *parser.Named_argumentContext) {
 	l.inNamedArgument--
+}
+
+func (l *modelicaListener) EnterLast_semicolon(node *parser.Last_semicolonContext) {
+	l.inLastSemicolon = true
+}
+
+func (l *modelicaListener) ExitLast_semicolon(node *parser.Last_semicolonContext) {
+	l.inLastSemicolon = false
 }
 
 // commentCollector is a wrapper around the default lexer which collects comment

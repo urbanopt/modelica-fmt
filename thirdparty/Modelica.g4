@@ -27,11 +27,15 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 grammar Modelica;
 
 stored_definition
-   : ('within' (name)? ';')* (('final')? class_definition ';')*
+   : ('within' (name)? ';')* (('final')? class_definition last_semicolon )*
    ;
 
 class_definition
    : ('encapsulated')? class_prefixes class_specifier
+   ;
+
+last_semicolon
+   : ';'
    ;
 
 class_specifier

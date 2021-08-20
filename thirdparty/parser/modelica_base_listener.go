@@ -33,6 +33,12 @@ func (s *BaseModelicaListener) EnterClass_definition(ctx *Class_definitionContex
 // ExitClass_definition is called when production class_definition is exited.
 func (s *BaseModelicaListener) ExitClass_definition(ctx *Class_definitionContext) {}
 
+// EnterLast_semicolon is called when production last_semicolon is entered.
+func (s *BaseModelicaListener) EnterLast_semicolon(ctx *Last_semicolonContext) {}
+
+// ExitLast_semicolon is called when production last_semicolon is exited.
+func (s *BaseModelicaListener) ExitLast_semicolon(ctx *Last_semicolonContext) {}
+
 // EnterClass_specifier is called when production class_specifier is entered.
 func (s *BaseModelicaListener) EnterClass_specifier(ctx *Class_specifierContext) {}
 

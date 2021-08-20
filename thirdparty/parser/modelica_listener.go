@@ -14,6 +14,9 @@ type ModelicaListener interface {
 	// EnterClass_definition is called when entering the class_definition production.
 	EnterClass_definition(c *Class_definitionContext)
 
+	// EnterLast_semicolon is called when entering the last_semicolon production.
+	EnterLast_semicolon(c *Last_semicolonContext)
+
 	// EnterClass_specifier is called when entering the class_specifier production.
 	EnterClass_specifier(c *Class_specifierContext)
 
@@ -289,6 +292,9 @@ type ModelicaListener interface {
 
 	// ExitClass_definition is called when exiting the class_definition production.
 	ExitClass_definition(c *Class_definitionContext)
+
+	// ExitLast_semicolon is called when exiting the last_semicolon production.
+	ExitLast_semicolon(c *Last_semicolonContext)
 
 	// ExitClass_specifier is called when exiting the class_specifier production.
 	ExitClass_specifier(c *Class_specifierContext)
