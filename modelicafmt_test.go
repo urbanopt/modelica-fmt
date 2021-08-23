@@ -27,16 +27,17 @@ func diffFiles(a, b string) (string, error) {
 }
 
 var exampleFileTests = []struct {
-	sourceFile string
-	outFile    string
-	lineLength int
+	sourceFile      string
+	outFile         string
+	formatterConfig Config
 }{
-	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", -1},
-	{"functions.mo", "functions-out.mo", -1},
-	{"example-no-within.mo", "example-no-within-out.mo", -1},
-	{"example-arrays.mo", "example-arrays-out.mo", -1},
-	{"gmt-building.mo", "gmt-building-out.mo", -1},
-	{"gmt-building.mo", "gmt-building-80-out.mo", 80},
+	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", Config{-1, false}},
+	{"functions.mo", "functions-out.mo", Config{-1, false}},
+	{"example-no-within.mo", "example-no-within-out.mo", Config{-1, false}},
+	{"example-arrays.mo", "example-arrays-out.mo", Config{-1, false}},
+	{"gmt-building.mo", "gmt-building-out.mo", Config{-1, false}},
+	{"gmt-building.mo", "gmt-building-80-out.mo", Config{80, false}},
+	{"gmt-building.mo", "gmt-building-empty-lines-out.mo", Config{-1, true}},
 }
 
 func TestFormattingExamples(t *testing.T) {
@@ -52,7 +53,11 @@ func TestFormattingExamples(t *testing.T) {
 			defer file.Close()
 
 			// Act
-			err = processFile(testSourceFile, file, testCase.lineLength)
+			err = processFile(
+				testSourceFile,
+				file,
+				testCase.formatterConfig,
+			)
 
 			// Assert
 			a.NoError(err)

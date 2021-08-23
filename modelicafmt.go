@@ -13,6 +13,11 @@ import (
 	"github.com/urbanopt/modelica-fmt/thirdparty/parser"
 )
 
+type Config struct {
+	maxLineLength int
+	emptyLines    bool
+}
+
 const (
 	// indent
 	spaceIndent = "  "
@@ -198,9 +203,12 @@ type modelicaListener struct {
 	inNamedArgument   int  // counts number of current or ancestor contexts that are named argument
 	inVector          int  // counts number of current or ancestor contexts that are vector
 	inLastSemicolon   bool // true if the listener is handling the last_semicolon rule
+
+	// Other config
+	config Config
 }
 
-func newListener(out io.Writer, commentTokens []antlr.Token, maxLineLength int) *modelicaListener {
+func newListener(out io.Writer, commentTokens []antlr.Token, config Config) *modelicaListener {
 	return &modelicaListener{
 		BaseModelicaListener: &parser.BaseModelicaListener{},
 		writer:               bufio.NewWriter(out),
@@ -217,7 +225,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token, maxLineLength int) 
 		previousTokenIdx:     -1,
 		commentTokens:        commentTokens,
 		currentLineLength:    0,
-		maxLineLength:        maxLineLength,
+		config:               config,
 	}
 }
 
@@ -277,8 +285,8 @@ func (l *modelicaListener) writeString(str string) {
 
 	// break the line if writing this string would make it too long and the previous token is breakable
 	var actualSpacePrefix string
-	if l.maxLineLength > 0 &&
-		l.currentLineLength+charsOnFirstLine > l.maxLineLength &&
+	if l.config.maxLineLength > 0 &&
+		l.currentLineLength+charsOnFirstLine > l.config.maxLineLength &&
 		tokenInGroup(l.previousTokenText, allowBreakAfterTokens) {
 
 		l.writeNewline()
@@ -342,6 +350,10 @@ func (l *modelicaListener) getSpaceBefore(str string, dryRun bool) string {
 // insertBlankLine returns true if an empty line should be inserted
 // Used when visiting a terminal semicolon (ie ';')
 func (l *modelicaListener) insertBlankLine() bool {
+	if !l.config.emptyLines {
+		return false
+	}
+
 	// if at the end of the file (ie the last semicolon) only insert an extra
 	// line if there are comments remaining which will be appended at the end of
 	// the file
@@ -501,7 +513,7 @@ func (c *commentCollector) NextToken() antlr.Token {
 }
 
 // processFile formats a file
-func processFile(filename string, out io.Writer, maxLineLength int) error {
+func processFile(filename string, out io.Writer, config Config) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -519,7 +531,7 @@ func processFile(filename string, out io.Writer, maxLineLength int) error {
 	p := parser.NewModelicaParser(stream)
 	sd := p.Stored_definition()
 
-	listener := newListener(out, tokenSource.commentTokens, maxLineLength)
+	listener := newListener(out, tokenSource.commentTokens, config)
 	defer listener.close()
 
 	antlr.ParseTreeWalkerDefault.Walk(listener, sd)

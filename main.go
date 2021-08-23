@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	write       = flag.Bool("w", false, "overwrite the file(s)")
-	versionFlag = flag.Bool("v", false, "display tool version")
-	lineLength  = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
+	write         = flag.Bool("w", false, "overwrite the file(s)")
+	versionFlag   = flag.Bool("v", false, "display tool version")
+	emptyLineFlag = flag.Bool("extra-padding", false, "BETA: adds empty lines for padding")
+	lineLength    = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
 	// build information added by goreleaser
 	version = "dev"
 	commit  = "none"
@@ -38,7 +39,7 @@ func isModelicaFile(f os.FileInfo) bool {
 
 func processAndWriteFile(filename string) {
 	var b bytes.Buffer
-	err := processFile(filename, bufio.NewWriter(&b), *lineLength)
+	err := processFile(filename, bufio.NewWriter(&b), Config{*lineLength, *emptyLineFlag})
 	if err != nil {
 		panic(err)
 	}
