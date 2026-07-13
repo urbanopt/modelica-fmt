@@ -14,7 +14,8 @@ model district
       epsPla=0.935,
       {{ data['lDis'] }},
       {{ data['lCon'] }}));
-  parameter String filNam[nBui]={{% for building in data["building_load_files"] %}"{{ building }}" {% if not loop.last %},{% endif %} {% endfor %} {% raw %}}
+  parameter String filNam[nBui]={ {% for building in data["building_load_files"] %}
+  "{{ building }}" {% if not loop.last %},{% endif %} {% endfor %} {% raw %}}
     "Library paths of the files with thermal loads as time series";
   Modelica.Blocks.Sources.Constant masFloDisPla(
     k=datDes.mPla_flow_nominal)

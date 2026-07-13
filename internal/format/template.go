@@ -8,16 +8,17 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sort"
 	"strings"
 )
 
-// Template dialects supported for .mot (templated Modelica) files.
+// Template dialects supported for .mot/.mopt (templated Modelica) files.
 const (
 	// DialectJinja is the Jinja template dialect used by geojson-modelica-translator.
 	DialectJinja = "jinja"
 )
 
-// Jinja templating constructs are not valid Modelica, so a .mot file cannot be
+// Jinja templating constructs are not valid Modelica, so a template file cannot be
 // parsed/formatted directly. The strategy (ported from geojson-modelica-translator's
 // management/format_modelica_files.py) is a substitute -> format -> reverse round trip:
 //
@@ -45,13 +46,15 @@ var (
 	// The reverse regexes match three-or-more digits so that files with 1000+
 	// substitutions (whose ids widen past the %03d minimum) are still restored
 	// correctly, rather than leaving a stray trailing digit.
-	commentedSubRegex = regexp.MustCompile(`/\*(JINJA_SUB_\d{3,})\*/`)
-	normalSubRegex    = regexp.MustCompile(`JINJA_SUB_\d{3,}`)
+	standaloneLineCommentedSubRegex = regexp.MustCompile(`(?m)(^[ \t]*)//\s*(JINJA_SUB_\d{3,})`)
+	inlineLineCommentedSubRegex     = regexp.MustCompile(`(^|[^:])//\s*(JINJA_SUB_\d{3,})`)
+	blockCommentedSubRegex          = regexp.MustCompile(`/\*(JINJA_SUB_\d{3,})\*/`)
+	normalSubRegex                  = regexp.MustCompile(`JINJA_SUB_\d{3,}`)
 )
 
 // isTemplateFile reports whether the given path is a templated Modelica file.
 func isTemplateFile(name string) bool {
-	return strings.HasSuffix(name, ".mot")
+	return strings.HasSuffix(name, ".mot") || strings.HasSuffix(name, ".mopt")
 }
 
 // subMap manages the mapping between placeholder identifiers and the original
@@ -85,14 +88,118 @@ func (s *subMap) getText(id string) (string, error) {
 }
 
 // subControl replaces Jinja control statements ({% ... %}) with commented-out
-// placeholders so the surrounding text remains valid Modelica.
+// placeholders so the surrounding text remains valid Modelica. Standalone
+// controls use line comments so the formatter keeps them separated from
+// adjacent Modelica comments and declarations; inline controls use block
+// comments so they do not swallow the rest of the line.
 func subControl(text string, sub *subMap) string {
-	text = jinjaLoopCommaRegex.ReplaceAllStringFunc(text, func(match string) string {
-		return "/*" + sub.addSub(match) + "*/"
+	return subControlSegment(text, text, 0, sub)
+}
+
+func subControlSegment(fullText, text string, offset int, sub *subMap) string {
+	var b strings.Builder
+	lineOffset := offset
+	for len(text) > 0 {
+		line := text
+		rest := ""
+		if i := strings.IndexByte(text, '\n'); i >= 0 {
+			line = text[:i+1]
+			rest = text[i+1:]
+		}
+		b.WriteString(subControlInLine(fullText, line, lineOffset, sub))
+		lineOffset += len(line)
+		text = rest
+	}
+	return b.String()
+}
+
+type controlSpan struct {
+	start       int
+	end         int
+	lineComment bool
+}
+
+func subControlInLine(fullText, line string, lineOffset int, sub *subMap) string {
+	var spans []controlSpan
+	for _, span := range jinjaLoopCommaRegex.FindAllStringIndex(line, -1) {
+		spans = append(spans, controlSpan{start: span[0], end: span[1]})
+	}
+
+	for _, span := range jinjaControlRegex.FindAllStringIndex(line, -1) {
+		insideLoopComma := false
+		for _, loopSpan := range spans {
+			if span[0] >= loopSpan.start && span[1] <= loopSpan.end {
+				insideLoopComma = true
+				break
+			}
+		}
+		if insideLoopComma {
+			continue
+		}
+		absStart := lineOffset + span[0]
+		absEnd := lineOffset + span[1]
+		spans = append(spans, controlSpan{
+			start:       span[0],
+			end:         span[1],
+			lineComment: isStandaloneConstructAt(fullText, absStart, absEnd),
+		})
+	}
+
+	if len(spans) == 0 {
+		return line
+	}
+
+	sort.Slice(spans, func(i, j int) bool {
+		return spans[i].start < spans[j].start
 	})
-	return jinjaControlRegex.ReplaceAllStringFunc(text, func(match string) string {
-		return "/*" + sub.addSub(match) + "*/"
-	})
+
+	var b strings.Builder
+	prevEnd := 0
+	for _, span := range spans {
+		b.WriteString(line[prevEnd:span.start])
+		b.WriteString(placeholderComment(line[span.start:span.end], sub, span.lineComment))
+		prevEnd = span.end
+	}
+	b.WriteString(line[prevEnd:])
+	return b.String()
+}
+
+func placeholderComment(text string, sub *subMap, lineComment bool) string {
+	if lineComment {
+		return "// " + sub.addSub(text)
+	}
+	return "/*" + sub.addSub(text) + "*/"
+}
+
+func isStandaloneConstructAt(text string, start, end int) bool {
+	lineStart := strings.LastIndexByte(text[:start], '\n') + 1
+	lineEnd := len(text)
+	if i := strings.IndexByte(text[end:], '\n'); i >= 0 {
+		lineEnd = end + i
+	}
+	before := strings.TrimSpace(text[lineStart:start])
+	after := strings.TrimSpace(text[end:lineEnd])
+	if after != "" {
+		return false
+	}
+	return before == "" || strings.HasSuffix(before, "{")
+}
+
+func subRawBlockControls(fullText, rawBlock string, blockStart int, sub *subMap) string {
+	var b strings.Builder
+	lineOffset := blockStart
+	for len(rawBlock) > 0 {
+		line := rawBlock
+		rest := ""
+		if i := strings.IndexByte(rawBlock, '\n'); i >= 0 {
+			line = rawBlock[:i+1]
+			rest = rawBlock[i+1:]
+		}
+		b.WriteString(subControlInLine(fullText, line, lineOffset, sub))
+		lineOffset += len(line)
+		rawBlock = rest
+	}
+	return b.String()
 }
 
 // subExpressions replaces template expressions with placeholders. GMT snippet
@@ -137,7 +244,7 @@ func subExpressionsInLine(line string, sub *subMap) string {
 	trimmed := body[prefixLen : len(body)-suffixLen]
 
 	if isGeneratedSnippetExpression(trimmed) {
-		return prefix + "/*" + sub.addSub(trimmed) + "*/" + suffix + newline
+		return prefix + placeholderComment(trimmed, sub, true) + suffix + newline
 	}
 
 	return subExpression(body, sub) + newline
@@ -174,14 +281,14 @@ func substituteJinja(text string, sub *subMap) string {
 
 		// Text before the raw block: substitute both control and expressions.
 		seg := text[prevEnd:start]
-		seg = subControl(seg, sub)
+		seg = subControlSegment(text, seg, prevEnd, sub)
 		seg = subExpressions(seg, sub)
 		b.WriteString(seg)
 
 		// The raw block itself: substitute only the control tags (including the
 		// {% raw %}/{% endraw %} tags), leaving any {{ ... }} as literal text.
 		raw := text[start:end]
-		raw = subControl(raw, sub)
+		raw = subRawBlockControls(text, raw, start, sub)
 		b.WriteString(raw)
 
 		prevEnd = end
@@ -212,7 +319,10 @@ func substituteTemplate(dialect, text string, sub *subMap) (string, error) {
 func reverseSub(text string, sub *subMap) (string, error) {
 	// Remove the comment wrappers around control-statement placeholders so that
 	// both commented and bare placeholders are restored uniformly below.
-	text = commentedSubRegex.ReplaceAllString(text, "${1}")
+	text = standaloneLineCommentedSubRegex.ReplaceAllString(text, "${1}${2}")
+	text = inlineLineCommentedSubRegex.ReplaceAllString(text, "${1} ${2}")
+	text = blockCommentedSubRegex.ReplaceAllString(text, "${1}")
+	text = trimWhitespaceBeforeRawPunctuation(text, sub)
 
 	var firstErr error
 	restored := normalSubRegex.ReplaceAllStringFunc(text, func(match string) string {
@@ -231,10 +341,79 @@ func reverseSub(text string, sub *subMap) (string, error) {
 	return restored, nil
 }
 
-// processTemplate formats a templated Modelica (.mot) file by running the
+func trimWhitespaceBeforeRawPunctuation(text string, sub *subMap) string {
+	matches := normalSubRegex.FindAllStringIndex(text, -1)
+	if len(matches) < 2 {
+		return text
+	}
+
+	var b strings.Builder
+	last := 0
+	for i := 0; i < len(matches)-1; i++ {
+		cur := matches[i]
+		next := matches[i+1]
+		between := text[cur[1]:next[0]]
+		if strings.TrimSpace(between) != "" {
+			continue
+		}
+		if !isRawControlPlaceholder(text[next[0]:next[1]], sub) {
+			continue
+		}
+		if next[1] >= len(text) || !isNoSpaceBeforeByte(text[next[1]]) {
+			continue
+		}
+
+		b.WriteString(text[last:cur[1]])
+		last = next[0]
+	}
+	b.WriteString(text[last:])
+	return b.String()
+}
+
+func isRawControlPlaceholder(id string, sub *subMap) bool {
+	orig, ok := sub.m[id]
+	return ok && strings.TrimSpace(orig) == "{% raw %}"
+}
+
+func isNoSpaceBeforeByte(b byte) bool {
+	return b == ')'
+}
+
+func sameNonWhitespaceContent(a, b string) bool {
+	ia, ib := 0, 0
+	for {
+		for ia < len(a) && isWhitespace(a[ia]) {
+			ia++
+		}
+		for ib < len(b) && isWhitespace(b[ib]) {
+			ib++
+		}
+		if ia == len(a) || ib == len(b) {
+			return ia == len(a) && ib == len(b)
+		}
+		if a[ia] != b[ib] {
+			return false
+		}
+		ia++
+		ib++
+	}
+}
+
+func isWhitespace(b byte) bool {
+	switch b {
+	case ' ', '\t', '\n', '\r', '\f', '\v':
+		return true
+	default:
+		return false
+	}
+}
+
+// processTemplate formats a templated Modelica file by running the
 // substitute -> format -> reverse round trip described above. If the substituted
-// text still cannot be parsed cleanly, the original text is emitted unchanged so
-// directory-wide formatting can continue across non-Modelica .mot scripts.
+// text still cannot be parsed cleanly, or if the round trip would change
+// non-whitespace content, the original text is emitted unchanged so
+// directory-wide formatting can continue across non-Modelica or unsupported
+// templates without corrupting them.
 func processTemplate(text string, out io.Writer, config Config, dialect, filename string) error {
 	sub := newSubMap()
 	substituted, err := substituteTemplate(dialect, text, sub)
@@ -251,6 +430,11 @@ func processTemplate(text string, out io.Writer, config Config, dialect, filenam
 	restored, err := reverseSub(buf.String(), sub)
 	if err != nil {
 		return err
+	}
+
+	if !sameNonWhitespaceContent(text, restored) {
+		_, writeErr := io.WriteString(out, text)
+		return writeErr
 	}
 
 	_, err = io.WriteString(out, restored)

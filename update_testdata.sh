@@ -27,3 +27,15 @@ for file in ./internal/format/testdata/*.mot; do
     outfile="${filename%.*}-out.mot"
     ./modelica-fmt $file > ./internal/format/testdata/${outfile}
 done
+
+for file in ./internal/format/testdata/*.mopt; do
+    if [[ ! -e $file ]]; then
+        continue
+    fi
+    if [[ $file == *-out.mopt ]]; then
+        continue
+    fi
+    filename=$(basename -- $file)
+    outfile="${filename%.*}-out.mopt"
+    ./modelica-fmt $file > ./internal/format/testdata/${outfile}
+done

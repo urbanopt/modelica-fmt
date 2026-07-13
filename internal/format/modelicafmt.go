@@ -652,10 +652,10 @@ func (l *parseErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingS
 }
 
 // ProcessFile formats a file. Plain Modelica files (.mo) are formatted directly;
-// template files (.mot) are routed through the template pipeline which makes the
+// template files (.mot/.mopt) are routed through the template pipeline which makes the
 // file temporarily parseable, formats it, and then restores the template
 // constructs (see template.go). dialect selects the template dialect used for
-// .mot files (see DialectJinja); it is ignored for plain .mo files.
+// template files (see DialectJinja); it is ignored for plain .mo files.
 func ProcessFile(filename string, out io.Writer, config Config, dialect string) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {

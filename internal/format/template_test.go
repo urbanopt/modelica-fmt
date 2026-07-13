@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// templateFileTests exercise the .mot (Jinja-templated Modelica) pipeline against
-// golden outputs. These fixtures and their expected results mirror the behavior of
+// templateFileTests exercise the Jinja-templated Modelica pipeline against golden
+// outputs. These fixtures and their expected results mirror the behavior of
 // geojson-modelica-translator's management/format_modelica_files.py so that GMT can
 // eventually drop its wrapper and call modelicafmt directly.
 var templateFileTests = []struct {
@@ -56,7 +56,7 @@ func TestFormattingTemplateExamples(t *testing.T) {
 }
 
 // TestTemplateFormattingIsIdempotent ensures that formatting an already-formatted
-// .mot file produces no further changes.
+// template file produces no further changes.
 func TestTemplateFormattingIsIdempotent(t *testing.T) {
 	a := require.New(t)
 	for _, testCase := range templateFileTests {
@@ -74,7 +74,7 @@ func TestTemplateFormattingIsIdempotent(t *testing.T) {
 }
 
 // TestTemplatePreservesNonWhitespaceContent mirrors GMT's own invariant: after
-// formatting a .mot file the only differences should be whitespace.
+// formatting a template file the only differences should be whitespace.
 func TestTemplatePreservesNonWhitespaceContent(t *testing.T) {
 	a := require.New(t)
 	for _, testCase := range templateFileTests {
@@ -102,9 +102,9 @@ func TestTemplateUnsupportedDialectReturnsError(t *testing.T) {
 	a.Contains(err.Error(), "mako")
 }
 
-// previouslySkippedTemplateTests are real GMT .mot files that used to fail
+// previouslySkippedTemplateTests are real GMT template files that used to fail
 // directory-wide formatting. They should now process without returning an error:
-// Modelica templates are formatted, and non-Modelica .mot scripts are passed
+// Modelica templates are formatted, and non-Modelica template scripts are passed
 // through unchanged.
 var previouslySkippedTemplateTests = []struct {
 	sourceFile string
@@ -129,8 +129,65 @@ func TestPreviouslySkippedTemplatesDoNotError(t *testing.T) {
 	}
 }
 
+func TestStandaloneControlTagsKeepLineBoundaries(t *testing.T) {
+	a := require.New(t)
+	var out bytes.Buffer
+	err := ProcessFile(
+		path.Join("testdata", "gmt-district-energy-system.mot"),
+		&out,
+		Config{-1, false, false},
+		DialectJinja)
+	a.NoError(err)
+
+	formatted := out.String()
+	a.NotContains(formatted, "{% for model in models %}//")
+	a.NotContains(formatted, "{{ model.instance }}//")
+	a.NotContains(formatted, "{% endfor %}// Model dependencies")
+	a.NotContains(formatted, "{% for coupling in couplings %}//")
+	a.NotContains(formatted, "{{ coupling.component_definitions }}//")
+	a.NotContains(formatted, "{% endfor %}equation")
+	a.NotContains(formatted, "{{ coupling.connect_statements }} //")
+	a.NotContains(formatted, "{% endfor %} annotation")
+
+	a.Regexp(`(?s)\{% for model in models %\}\s*//`, formatted)
+	a.Regexp(`(?s)\{\{ model\.instance \}\}\s*//`, formatted)
+	a.Regexp(`(?s)\{% endfor %\}\s*// Model dependencies`, formatted)
+	a.Regexp(`(?s)\{% endfor %\}\s*equation`, formatted)
+}
+
+func TestStandaloneRawTagsKeepLineBoundaries(t *testing.T) {
+	a := require.New(t)
+	original := `model RawBlock
+{% raw %}
+  RealInput u annotation (Placement(transformation(extent={{-240,-40},{-200,0}})));
+{% endraw %}
+end RawBlock;
+`
+	var out bytes.Buffer
+	err := processTemplate(original, &out, Config{-1, false, false}, DialectJinja, "raw-block.mot")
+	a.NoError(err)
+
+	formatted := out.String()
+	a.Contains(formatted, "{% raw %}\n")
+	a.Contains(formatted, "\n{% endraw %}\n")
+	a.NotContains(formatted, "{% raw %}RealInput")
+	a.NotContains(formatted, "));{% endraw %}")
+}
+
+func TestMoptFilesUseTemplatePipeline(t *testing.T) {
+	a := require.New(t)
+	sourceFile := path.Join(outputDir, "template-extension.mopt")
+	a.NoError(os.WriteFile(sourceFile, []byte("model {{ model_name }}\nend {{ model_name }};\n"), 0644))
+	defer os.Remove(sourceFile)
+
+	var out bytes.Buffer
+	err := ProcessFile(sourceFile, &out, Config{-1, false, false}, DialectJinja)
+	a.NoError(err)
+	a.Equal("model {{ model_name }}\nend {{ model_name }};\n", out.String())
+}
+
 // TestNonModelicaTemplatePassesThrough specifically guards against silent data
-// loss: a non-empty .mot file that is not actually Modelica must be emitted
+// loss: a non-empty template file that is not actually Modelica must be emitted
 // unchanged instead of being overwritten with an empty file.
 func TestNonModelicaTemplatePassesThrough(t *testing.T) {
 	a := require.New(t)
@@ -139,6 +196,17 @@ func TestNonModelicaTemplatePassesThrough(t *testing.T) {
 
 	var out bytes.Buffer
 	err = ProcessFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false}, DialectJinja)
+	a.NoError(err)
+	a.Equal(string(source), out.String())
+}
+
+func TestTemplateWithMeaningfulDiffPassesThrough(t *testing.T) {
+	a := require.New(t)
+	source, err := os.ReadFile(path.Join("testdata", "gmt-district-energy-system.mot"))
+	a.NoError(err)
+
+	var out bytes.Buffer
+	err = ProcessFile(path.Join("testdata", "gmt-district-energy-system.mot"), &out, Config{-1, false, false}, DialectJinja)
 	a.NoError(err)
 	a.Equal(string(source), out.String())
 }
@@ -205,6 +273,42 @@ func TestLoopConditionalCommaRoundTrip(t *testing.T) {
 	a.Equal(original, restored)
 }
 
+func TestLoopedArrayDoesNotCreateJinjaExpressionStart(t *testing.T) {
+	a := require.New(t)
+	original := `model LoopedArray
+  parameter String filNam[nBui]={
+    {% for building in data["building_load_files"] %}
+    "{{ building }}"{% if not loop.last %},{% endif %}
+    {% endfor %}{% raw %}}
+    "Library paths";{% endraw %}
+end LoopedArray;
+`
+	var out bytes.Buffer
+	err := processTemplate(original, &out, Config{-1, false, false}, DialectJinja, "looped-array.mot")
+	a.NoError(err)
+
+	formatted := out.String()
+	a.NotContains(formatted, "{{%", "a literal Modelica array opener must not merge with a Jinja control tag")
+	a.Contains(formatted, "{% for building in data[\"building_load_files\"] %}")
+}
+
+func TestInlineExpressionBeforeRawPunctuationDoesNotGainRenderedSpace(t *testing.T) {
+	a := require.New(t)
+	original := `model PumpTemplate
+  Pump pumSto(
+    dp_nominal={{ data["source_pump_dp_nominal"] }}{% raw %})
+    "Bore field pump";
+{% endraw %}end PumpTemplate;
+`
+	var out bytes.Buffer
+	err := processTemplate(original, &out, Config{-1, false, false}, DialectJinja, "pump-template.mot")
+	a.NoError(err)
+
+	formatted := out.String()
+	a.Contains(formatted, `{{ data["source_pump_dp_nominal"] }}{% raw %})`)
+	a.NotContains(formatted, `{{ data["source_pump_dp_nominal"] }} {% raw %})`)
+}
+
 func TestGeneratedSnippetExpressionsAreCommented(t *testing.T) {
 	a := require.New(t)
 	original := "{{ model.instance }}\n{{ coupling.component_definitions }}\n{{ coupling.connect_statements }}\n{{ data['lCon'] }}\n"
@@ -213,9 +317,9 @@ func TestGeneratedSnippetExpressionsAreCommented(t *testing.T) {
 	substituted, err := substituteTemplate(DialectJinja, original, sub)
 	a.NoError(err)
 
-	a.Contains(substituted, "/*JINJA_SUB_001*/")
-	a.Contains(substituted, "/*JINJA_SUB_002*/")
-	a.Contains(substituted, "/*JINJA_SUB_003*/")
+	a.Contains(substituted, "// JINJA_SUB_001")
+	a.Contains(substituted, "// JINJA_SUB_002")
+	a.Contains(substituted, "// JINJA_SUB_003")
 	a.Contains(substituted, "\nJINJA_SUB_004\n")
 
 	restored, err := reverseSub(substituted, sub)

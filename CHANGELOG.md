@@ -1,8 +1,8 @@
 # Unreleased
 
-* Add native support for formatting templated Modelica (`.mot`) files that embed Jinja
+* Add native support for formatting templated Modelica (`.mot`/`.mopt`) files that embed Jinja
   constructs (`{{ ... }}`, `{% ... %}`, `{% raw %}`), ported from geojson-modelica-translator's
-  `format_modelica_files.py`. `.mot` files are detected automatically (including in directory
+  `format_modelica_files.py`. `.mot` and `.mopt` files are detected automatically (including in directory
   walks) and formatted via a substitute → format → reverse round trip. Adds a `-template` flag
   (currently `jinja`) to select the template dialect.
 * Refuse to overwrite a file with empty output: if a non-empty input produces no
