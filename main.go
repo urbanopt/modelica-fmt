@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/urbanopt/modelica-fmt/internal/format"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 	versionFlag   = flag.Bool("v", false, "display tool version")
 	emptyLineFlag = flag.Bool("extra-padding", false, "BETA: adds empty lines for padding")
 	lineLength    = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
+	templateFlag  = flag.String("template", format.DialectJinja, "template dialect for .mot/.mopt files (jinja)")
 	wrapArrays    = flag.Bool("wrap-arrays", false, "wrap multidimensional arrays ({...}) across multiple lines (outside annotations)")
 	// hadError is set to true when a file could not be processed, so the
 	// program can exit with a non-zero status without aborting other files
@@ -36,14 +38,20 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+// isModelicaFile reports whether a file discovered during a directory walk
+// should be formatted. Both plain Modelica files (.mo) and templated Modelica
+// files (.mot/.mopt) are included.
 func isModelicaFile(f os.FileInfo) bool {
 	name := f.Name()
-	return !f.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".mo")
+	if f.IsDir() || strings.HasPrefix(name, ".") {
+		return false
+	}
+	return strings.HasSuffix(name, ".mo") || strings.HasSuffix(name, ".mot") || strings.HasSuffix(name, ".mopt")
 }
 
 func processAndWriteFile(filename string) {
 	var b bytes.Buffer
-	err := processFile(filename, bufio.NewWriter(&b), Config{*lineLength, *emptyLineFlag, *wrapArrays})
+	err := format.ProcessFile(filename, &b, format.NewConfig(*lineLength, *emptyLineFlag, *wrapArrays), *templateFlag)
 	if err != nil {
 		// The file could not be parsed cleanly (e.g. it contains an
 		// unrecognized token). Leave the original file untouched and report

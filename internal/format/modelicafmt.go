@@ -1,7 +1,7 @@
 // Copyright (c) 2020, Alliance for Sustainable Energy, LLC.
 // All rights reserved.
 
-package main
+package format
 
 import (
 	"bufio"
@@ -22,6 +22,17 @@ type Config struct {
 	// kept inline; the outer `max(N-2, 1)` dimension levels are broken. See
 	// issue #29.
 	wrapArrays bool
+}
+
+// NewConfig builds a Config from the formatter's tunable options. It exists so
+// that callers outside this package (e.g. the CLI) can construct a Config
+// without needing the unexported fields to be exported.
+func NewConfig(maxLineLength int, emptyLines, wrapArrays bool) Config {
+	return Config{
+		maxLineLength: maxLineLength,
+		emptyLines:    emptyLines,
+		wrapArrays:    wrapArrays,
+	}
 }
 
 const (
@@ -640,14 +651,47 @@ func (l *parseErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingS
 	l.errors = append(l.errors, fmt.Sprintf("line %d:%d %s", line, column, msg))
 }
 
-// processFile formats a file
-func processFile(filename string, out io.Writer, config Config) error {
+// ProcessFile formats a file. Plain Modelica files (.mo) are formatted directly;
+// template files (.mot/.mopt) are routed through the template pipeline which makes the
+// file temporarily parseable, formats it, and then restores the template
+// constructs (see template.go). dialect selects the template dialect used for
+// template files (see DialectJinja); it is ignored for plain .mo files.
+func ProcessFile(filename string, out io.Writer, config Config, dialect string) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
 
 	text := string(content)
+	if isTemplateFile(filename) {
+		return processTemplate(text, out, config, dialect, filename)
+	}
+	return formatModelica(text, out, config, filename)
+}
+
+// countingWriter wraps an io.Writer and counts how many non-whitespace bytes
+// pass through it. It lets formatModelica detect the case where a non-empty
+// input produced no meaningful output.
+type countingWriter struct {
+	w             io.Writer
+	nonWhitespace int
+}
+
+func (c *countingWriter) Write(p []byte) (int, error) {
+	for _, b := range p {
+		switch b {
+		case ' ', '\t', '\r', '\n', '\f', '\v':
+		default:
+			c.nonWhitespace++
+		}
+	}
+	return c.w.Write(p)
+}
+
+// formatModelica formats a string of Modelica source, writing the result to out.
+// filename is used only for error reporting.
+func formatModelica(text string, out io.Writer, config Config, filename string) error {
+	counter := &countingWriter{w: out}
 	inputStream := antlr.NewInputStream(text)
 	lexer := parser.NewModelicaLexer(inputStream)
 
@@ -668,8 +712,7 @@ func processFile(filename string, out io.Writer, config Config) error {
 	p.AddErrorListener(errorListener)
 	sd := p.Stored_definition()
 
-	listener := newListener(out, tokenSource.commentTokens, config)
-	defer listener.close()
+	listener := newListener(counter, tokenSource.commentTokens, config)
 
 	antlr.ParseTreeWalkerDefault.Walk(listener, sd)
 	// add any remaining comments and handle newline at end of file
@@ -679,11 +722,23 @@ func processFile(filename string, out io.Writer, config Config) error {
 	if !listener.onNewLine {
 		listener.writeNewline()
 	}
+	// flush the listener's buffered writer so the counter reflects everything
+	// that was produced before we inspect it below
+	listener.close()
 
 	// if any errors were encountered while parsing, report them so that the
 	// caller can avoid overwriting the original file with malformed output
 	if len(errorListener.errors) > 0 {
 		return fmt.Errorf("%s: %s", filename, strings.Join(errorListener.errors, "; "))
+	}
+
+	// guard against silently emptying a file: if the input had meaningful
+	// content but the formatter produced no non-whitespace output, the parser
+	// almost certainly matched an empty stored_definition without raising an
+	// error (e.g. the file is not actually Modelica). Refuse rather than
+	// overwrite the original with an empty file.
+	if strings.TrimSpace(text) != "" && counter.nonWhitespace == 0 {
+		return fmt.Errorf("%s: refusing to write empty output for non-empty input (file does not appear to be valid Modelica)", filename)
 	}
 
 	return nil

@@ -16,5 +16,5 @@ jobs:
         with:
           go-version-file: go.mod
       -
-        name: Run Go Tests
-        run: go test ./...
+        name: Build and Test
+        run: make all
