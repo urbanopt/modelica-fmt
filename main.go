@@ -20,6 +20,9 @@ var (
 	versionFlag   = flag.Bool("v", false, "display tool version")
 	emptyLineFlag = flag.Bool("extra-padding", false, "BETA: adds empty lines for padding")
 	lineLength    = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
+	// hadError is set to true when a file could not be processed, so the
+	// program can exit with a non-zero status without aborting other files
+	hadError bool
 	// build information added by goreleaser
 	version = "dev"
 	commit  = "none"
@@ -41,7 +44,13 @@ func processAndWriteFile(filename string) {
 	var b bytes.Buffer
 	err := processFile(filename, bufio.NewWriter(&b), Config{*lineLength, *emptyLineFlag})
 	if err != nil {
-		panic(err)
+		// The file could not be parsed cleanly (e.g. it contains an
+		// unrecognized token). Leave the original file untouched and report
+		// the error instead of writing malformed output.
+		fmt.Fprintln(os.Stderr, "error: "+err.Error())
+		fmt.Fprintln(os.Stderr, "skipping "+filename+" (file left unchanged)")
+		hadError = true
+		return
 	}
 	if *write {
 		err := ioutil.WriteFile(filename, b.Bytes(), 777)
@@ -94,5 +103,11 @@ func main() {
 		default:
 			processAndWriteFile(path)
 		}
+	}
+
+	// exit non-zero if any file failed to process so the failure is not
+	// silently ignored (e.g. in CI or pre-commit hooks)
+	if hadError {
+		os.Exit(1)
 	}
 }

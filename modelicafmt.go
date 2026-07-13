@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -512,6 +513,25 @@ func (c *commentCollector) NextToken() antlr.Token {
 	return token
 }
 
+// parseErrorListener collects syntax errors encountered while lexing and
+// parsing a file. This includes lexer "token recognition error"s as well as
+// parser errors. It replaces ANTLR's default console error listener so that
+// callers can detect whether a file was parsed cleanly.
+type parseErrorListener struct {
+	*antlr.DefaultErrorListener
+	errors []string
+}
+
+func newParseErrorListener() *parseErrorListener {
+	return &parseErrorListener{
+		DefaultErrorListener: antlr.NewDefaultErrorListener(),
+	}
+}
+
+func (l *parseErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
+	l.errors = append(l.errors, fmt.Sprintf("line %d:%d %s", line, column, msg))
+}
+
 // processFile formats a file
 func processFile(filename string, out io.Writer, config Config) error {
 	content, err := ioutil.ReadFile(filename)
@@ -523,12 +543,21 @@ func processFile(filename string, out io.Writer, config Config) error {
 	inputStream := antlr.NewInputStream(text)
 	lexer := parser.NewModelicaLexer(inputStream)
 
+	// collect lexer and parser errors so that a file which fails to parse
+	// (e.g. contains an unrecognized token) is not silently formatted with a
+	// truncated/incorrect parse tree
+	errorListener := newParseErrorListener()
+	lexer.RemoveErrorListeners()
+	lexer.AddErrorListener(errorListener)
+
 	// wrap the default lexer to collect comments and set it as the stream's source
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	tokenSource := newCommentCollector(lexer)
 	stream.SetTokenSource(&tokenSource)
 
 	p := parser.NewModelicaParser(stream)
+	p.RemoveErrorListeners()
+	p.AddErrorListener(errorListener)
 	sd := p.Stored_definition()
 
 	listener := newListener(out, tokenSource.commentTokens, config)
@@ -541,6 +570,12 @@ func processFile(filename string, out io.Writer, config Config) error {
 	}
 	if !listener.onNewLine {
 		listener.writeNewline()
+	}
+
+	// if any errors were encountered while parsing, report them so that the
+	// caller can avoid overwriting the original file with malformed output
+	if len(errorListener.errors) > 0 {
+		return fmt.Errorf("%s: %s", filename, strings.Join(errorListener.errors, "; "))
 	}
 
 	return nil
