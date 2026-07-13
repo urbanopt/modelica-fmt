@@ -17,6 +17,7 @@ import (
 type Config struct {
 	maxLineLength int
 	emptyLines    bool
+	formatHTML    bool
 }
 
 const (
@@ -311,6 +312,21 @@ func (l *modelicaListener) writeString(str string) {
 	l.currentLineLength += charsOnLastLine
 }
 
+// writeHTMLString writes a pre-formatted, multi-line HTML string literal. Unlike
+// writeString it does not apply line-length breaking, since the HTML has already
+// been laid out with its own indentation.
+func (l *modelicaListener) writeHTMLString(formatted string) {
+	prefix := l.getSpaceBefore(formatted, false)
+	l.writer.WriteString(prefix + formatted)
+
+	lastNewlineIndex := strings.LastIndex(formatted, "\n")
+	if lastNewlineIndex < 0 {
+		l.currentLineLength += len(prefix) + len(formatted)
+	} else {
+		l.currentLineLength = len(formatted) - (lastNewlineIndex + 1)
+	}
+}
+
 func (l *modelicaListener) writeNewline() {
 	// explicitly not using l.writeString here b/c it's not necessary and I think we could end up in infinite recursion (though really unlikely)
 	l.writer.WriteString("\n")
@@ -376,7 +392,15 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 		l.writeComment(commentToken)
 	}
 
-	l.writeString(node.GetText())
+	if l.config.formatHTML && node.GetSymbol().GetTokenType() == parser.ModelicaLexerSTRING {
+		if formatted, ok := maybeFormatHTMLString(node.GetText(), l.indentation()+1); ok {
+			l.writeHTMLString(formatted)
+		} else {
+			l.writeString(node.GetText())
+		}
+	} else {
+		l.writeString(node.GetText())
+	}
 
 	if l.previousTokenText == "within" {
 		l.withinOnCurrentLine = true

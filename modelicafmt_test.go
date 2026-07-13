@@ -32,13 +32,16 @@ var exampleFileTests = []struct {
 	outFile         string
 	formatterConfig Config
 }{
-	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", Config{-1, false}},
-	{"functions.mo", "functions-out.mo", Config{-1, false}},
-	{"example-no-within.mo", "example-no-within-out.mo", Config{-1, false}},
-	{"example-arrays.mo", "example-arrays-out.mo", Config{-1, false}},
-	{"gmt-building.mo", "gmt-building-out.mo", Config{-1, false}},
-	{"gmt-building.mo", "gmt-building-80-out.mo", Config{80, false}},
-	{"gmt-building.mo", "gmt-building-empty-lines-out.mo", Config{-1, true}},
+	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", Config{-1, false, false}},
+	{"functions.mo", "functions-out.mo", Config{-1, false, false}},
+	{"example-no-within.mo", "example-no-within-out.mo", Config{-1, false, false}},
+	{"example-arrays.mo", "example-arrays-out.mo", Config{-1, false, false}},
+	{"gmt-building.mo", "gmt-building-out.mo", Config{-1, false, false}},
+	{"gmt-building.mo", "gmt-building-80-out.mo", Config{80, false, false}},
+	{"gmt-building.mo", "gmt-building-empty-lines-out.mo", Config{-1, true, false}},
+	{"html-annotation.mo", "html-annotation-out.mo", Config{-1, false, false}},
+	{"html-annotation.mo", "html-annotation-html-out.mo", Config{-1, false, true}},
+	{"gmt-building.mo", "gmt-building-html-out.mo", Config{-1, false, true}},
 }
 
 func TestFormattingExamples(t *testing.T) {
@@ -82,7 +85,7 @@ func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
 	defer os.Remove(sourceFile)
 
 	var out bytes.Buffer
-	err := processFile(sourceFile, &out, Config{-1, false})
+	err := processFile(sourceFile, &out, Config{-1, false, false})
 
 	a.Error(err, "processFile should return an error for input with unrecognized tokens")
 }

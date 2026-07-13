@@ -21,6 +21,41 @@ To run the examples:
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
 
+## Formatting HTML in annotations (BETA)
+
+Modelica annotations commonly embed HTML documentation, e.g.
+`Documentation(info="<html>...</html>")` and `revisions="..."`. By default the entire
+annotation string is emitted verbatim. Pass `--format-html` to pretty-print the embedded
+HTML so it is indented consistently with the surrounding Modelica structure:
+
+```bash
+./modelica-fmt --format-html examples/gmt-building.mo
+```
+
+This feature is **opt-in** and intentionally conservative:
+
+- A string is treated as HTML only when its content begins with `<html>` (the Modelica
+  convention), so key names like `info`/`revisions` are not hard-coded.
+- Only whitespace/indentation changes — tags, attributes, entities (e.g. `&amp;`) and text
+  are preserved exactly, and the `\"` escaping inside Modelica strings is round-tripped
+  losslessly. Each tag, text node and comment is placed on its own line indented to its
+  nesting depth. The result is idempotent.
+- Whitespace-sensitive elements (`<pre>`, `<textarea>`, `<script>`, `<style>`) are left
+  verbatim.
+- Malformed or unbalanced HTML is left untouched rather than risk corrupting it.
+- HTML lines do not participate in the `--line-length` limit.
+
+### Known limitations
+
+These are intentional v1 trade-offs, documented here so they are easy to revisit later:
+
+- **Text nodes collapse to a single line.** Each text node is placed on one line (its
+  internal whitespace runs collapsed to single spaces), so a long paragraph becomes one long
+  line.
+- **Conservative bail on unbalanced HTML.** HTML with omitted closing tags (e.g. a bare
+  `<li>` or `<p>`) or mismatched tags is left unformatted rather than reflowed, to avoid
+  corrupting content.
+
 ## Usage with pre-commit framework
 
 After adding modelicafmt to your system path, add the following lines to your .pre-commit-config.yaml file under the `repos:` section.

@@ -20,6 +20,7 @@ var (
 	versionFlag   = flag.Bool("v", false, "display tool version")
 	emptyLineFlag = flag.Bool("extra-padding", false, "BETA: adds empty lines for padding")
 	lineLength    = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
+	formatHTML    = flag.Bool("format-html", false, "BETA: pretty-print HTML content inside annotation strings (e.g. Documentation info/revisions)")
 	// hadError is set to true when a file could not be processed, so the
 	// program can exit with a non-zero status without aborting other files
 	hadError bool
@@ -42,7 +43,7 @@ func isModelicaFile(f os.FileInfo) bool {
 
 func processAndWriteFile(filename string) {
 	var b bytes.Buffer
-	err := processFile(filename, bufio.NewWriter(&b), Config{*lineLength, *emptyLineFlag})
+	err := processFile(filename, bufio.NewWriter(&b), Config{*lineLength, *emptyLineFlag, *formatHTML})
 	if err != nil {
 		// The file could not be parsed cleanly (e.g. it contains an
 		// unrecognized token). Leave the original file untouched and report
