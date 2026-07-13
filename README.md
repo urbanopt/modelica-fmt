@@ -7,10 +7,37 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 ```bash
 modelica-fmt [-w] [-help] <sources>...
 Options:
-  -w  overwrite source with formatted output. If flag is not present print to stdout
+  -w            overwrite source with formatted output. If flag is not present print to stdout
+  -wrap-arrays  wrap multidimensional arrays ({...}) across multiple lines (outside annotations)
 Arguments:
   sources  one or more files or directories to format
 ```
+
+### Array formatting (`-wrap-arrays`)
+
+By default arrays (`{...}`) are kept on a single line. With `-wrap-arrays`,
+multidimensional arrays outside of annotations are broken across lines in a
+compact style: the innermost two dimensions are kept inline while the outer
+`max(N-2, 1)` dimension levels are broken. For example:
+
+```modelica
+parameter Integer array2D[2,2]={
+  {1,2},
+  {3,4}};
+parameter Integer array3D[2,2,2]={
+  {{1,2},{3,4}},
+  {{5,6},{7,8}}};
+parameter Integer array4D[2,2,2,2]={
+  {
+    {{1,2},{3,4}},
+    {{5,6},{7,8}}},
+  {
+    {{9,10},{11,12}},
+    {{13,14},{15,16}}}};
+```
+
+1D arrays, iterator constructors, matrices (`[...]`) and arrays inside
+annotations are left unchanged.
 
 To run the examples:
 
