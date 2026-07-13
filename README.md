@@ -57,8 +57,12 @@ This feature is **opt-in** and intentionally conservative:
   convention), so key names like `info`/`revisions` are not hard-coded.
 - Only whitespace/indentation changes — tags, attributes, entities (e.g. `&amp;`) and text
   are preserved exactly, and the `\"` escaping inside Modelica strings is round-tripped
-  losslessly. Each tag, text node and comment is placed on its own line indented to its
-  nesting depth. The result is idempotent.
+  losslessly. The result is idempotent.
+- Block-level elements (e.g. `<p>`, `<ul>`, `<li>`, `<div>`), comments and doctypes are
+  placed on their own lines indented to their nesting depth. Inline/phrasing elements
+  (e.g. `<b>`, `<i>`, `<a>`, `<code>`, `<span>`, `<br/>`) and the text around them stay
+  together on one line, so short markup such as `<b>Example</b>` or
+  `<a href=\"...\">link</a>` is kept condensed instead of exploded one tag per line.
 - Whitespace-sensitive elements (`<pre>`, `<textarea>`, `<script>`, `<style>`) are left
   verbatim.
 - Malformed or unbalanced HTML is left untouched rather than risk corrupting it.
@@ -68,9 +72,9 @@ This feature is **opt-in** and intentionally conservative:
 
 These are intentional v1 trade-offs, documented here so they are easy to revisit later:
 
-- **Text nodes collapse to a single line.** Each text node is placed on one line (its
-  internal whitespace runs collapsed to single spaces), so a long paragraph becomes one long
-  line.
+- **Inline runs collapse to a single line.** A run of text and inline elements is placed on
+  one line (its internal whitespace runs collapsed to single spaces), so a long paragraph
+  becomes one long line; it is not wrapped to `--line-length`.
 - **Conservative bail on unbalanced HTML.** HTML with omitted closing tags (e.g. a bare
   `<li>` or `<p>`) or mismatched tags is left unformatted rather than reflowed, to avoid
   corrupting content.

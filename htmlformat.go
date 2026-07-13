@@ -23,6 +23,20 @@ var preserveElements = map[string]bool{
 	"pre": true, "textarea": true, "script": true, "style": true,
 }
 
+// inlineElements are HTML phrasing/inline elements that are kept on the same line
+// as the surrounding text rather than broken onto their own lines. This keeps
+// short markup such as <b>bold</b> or <a href="...">link</a> condensed instead of
+// exploding every tag onto a separate line.
+var inlineElements = map[string]bool{
+	"a": true, "abbr": true, "b": true, "bdi": true, "bdo": true, "br": true,
+	"cite": true, "code": true, "data": true, "dfn": true, "em": true, "i": true,
+	"img": true, "kbd": true, "label": true, "mark": true, "q": true, "rp": true,
+	"rt": true, "ruby": true, "s": true, "samp": true, "small": true, "span": true,
+	"strong": true, "sub": true, "sup": true, "time": true, "u": true, "var": true,
+	"wbr": true, "tt": true, "big": true, "strike": true, "font": true,
+	"acronym": true,
+}
+
 // isHTMLContent returns true if the (already unescaped) string content should be
 // treated as HTML. Per Modelica convention this is when the first non-whitespace
 // content is an opening <html> tag.
@@ -119,32 +133,38 @@ func isSelfClosingTag(raw string) bool {
 	return strings.HasSuffix(t, "/>")
 }
 
-// collapseHTMLWhitespace trims and collapses runs of ASCII whitespace to a single
-// space. Non-ASCII-whitespace bytes (including UTF-8 NBSP and entity text like
-// "&nbsp;") are preserved exactly so no content is lost.
-func collapseHTMLWhitespace(s string) string {
+// collapseInlineWhitespace collapses runs of ASCII whitespace to a single space
+// while preserving a single leading/trailing space when the original text had one,
+// so inline text joins cleanly with adjacent inline elements. Non-ASCII bytes
+// (including UTF-8 NBSP and entity text like "&nbsp;") are preserved exactly so no
+// content is lost. Boundary spaces are trimmed later when the inline run is flushed.
+func collapseInlineWhitespace(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	inSpace := false
-	started := false
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
 		case ' ', '\t', '\n', '\r', '\f', '\v':
 			inSpace = true
 		default:
-			if inSpace && started {
+			if inSpace {
 				b.WriteByte(' ')
+				inSpace = false
 			}
 			b.WriteByte(s[i])
-			started = true
-			inSpace = false
 		}
+	}
+	if inSpace {
+		b.WriteByte(' ')
 	}
 	return b.String()
 }
 
-// formatHTMLDocString pretty-prints HTML content, placing each tag, text node and
-// comment on its own line indented to its nesting depth (starting at baseIndent).
+// formatHTMLDocString pretty-prints HTML content. Block-level elements, comments
+// and whitespace-sensitive elements are placed on their own lines indented to their
+// nesting depth (starting at baseIndent). Inline/phrasing elements (see
+// inlineElements) and the text around them are kept together on a single line, so
+// short markup such as <b>bold</b> or <a href="...">link</a> stays condensed.
 // Tag/attribute/entity/text bytes are preserved exactly; only whitespace changes.
 // Whitespace-sensitive elements (pre/textarea/script/style) are emitted verbatim.
 //
@@ -156,7 +176,18 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 	var stack []string
 	depth := baseIndent
 
+	var inline strings.Builder
 	indentAt := func(d int) string { return strings.Repeat(spaceIndent, d) }
+
+	// flushInline emits any accumulated inline run as its own line (trimmed of the
+	// boundary spaces preserved during collapsing) and resets the buffer.
+	flushInline := func() {
+		text := strings.Trim(inline.String(), " \t\n\r\f\v")
+		inline.Reset()
+		if text != "" {
+			lines = append(lines, indentAt(depth)+text)
+		}
+	}
 
 	for {
 		tt := z.Next()
@@ -170,16 +201,18 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 
 		switch tt {
 		case html.TextToken:
-			text := collapseHTMLWhitespace(raw)
-			if text == "" {
-				continue
-			}
-			lines = append(lines, indentAt(depth)+text)
+			inline.WriteString(collapseInlineWhitespace(raw))
 		case html.SelfClosingTagToken:
-			lines = append(lines, indentAt(depth)+raw)
+			if inlineElements[htmlTagName(raw)] {
+				inline.WriteString(raw)
+			} else {
+				flushInline()
+				lines = append(lines, indentAt(depth)+raw)
+			}
 		case html.StartTagToken:
 			name := htmlTagName(raw)
 			if preserveElements[name] {
+				flushInline()
 				block, ok := capturePreserved(z, name, raw)
 				if !ok {
 					return "", false
@@ -187,6 +220,15 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 				lines = append(lines, indentAt(depth)+block)
 				break
 			}
+			if inlineElements[name] {
+				inline.WriteString(raw)
+				if !voidElements[name] && !isSelfClosingTag(raw) {
+					stack = append(stack, name)
+				}
+				break
+			}
+			// block element
+			flushInline()
 			lines = append(lines, indentAt(depth)+raw)
 			if voidElements[name] || isSelfClosingTag(raw) {
 				break
@@ -197,20 +239,33 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 			name := htmlTagName(raw)
 			if voidElements[name] {
 				// stray end tag for a void element: emit but don't dedent
-				lines = append(lines, indentAt(depth)+raw)
+				if inlineElements[name] {
+					inline.WriteString(raw)
+				} else {
+					flushInline()
+					lines = append(lines, indentAt(depth)+raw)
+				}
 				break
 			}
 			if len(stack) == 0 || stack[len(stack)-1] != name {
 				return "", false
 			}
 			stack = stack[:len(stack)-1]
+			if inlineElements[name] {
+				inline.WriteString(raw)
+				break
+			}
+			// block element
+			flushInline()
 			depth--
 			lines = append(lines, indentAt(depth)+raw)
 		case html.CommentToken, html.DoctypeToken:
+			flushInline()
 			lines = append(lines, indentAt(depth)+strings.TrimSpace(raw))
 		}
 	}
 
+	flushInline()
 	if len(stack) != 0 {
 		return "", false
 	}

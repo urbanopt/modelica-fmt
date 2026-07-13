@@ -8,18 +8,10 @@ model Example
       info="
         <html>
           <p>
-            Hello &amp; welcome to
-            <b>
-              Example
-            </b>
-            .
+            Hello &amp; welcome to <b>Example</b>.
           </p>
           <p>
-            See
-            <a href=\"modelica://Some.Package.Example\">
-              Example
-            </a>
-            for more details and a four-pipe fan coil unit model derived from the base classes.
+            See <a href=\"modelica://Some.Package.Example\">Example</a> for more details and a four-pipe fan coil unit model derived from the base classes.
           </p>
           <pre>
   code line one
@@ -30,9 +22,7 @@ model Example
         <html>
           <ul>
             <li>
-              January 1, 2020, by Someone:
-              <br/>
-              Initial implementation.
+              January 1, 2020, by Someone:<br/>Initial implementation.
             </li>
           </ul>
         </html>"),

@@ -102,6 +102,29 @@ func TestFormatHTMLDocStringMalformedBails(t *testing.T) {
 	a.False(ok)
 }
 
+func TestFormatHTMLDocStringInlineElementsStayOnOneLine(t *testing.T) {
+	a := require.New(t)
+
+	// Inline elements and their surrounding text should be condensed onto one
+	// line inside their block parent, rather than exploded one tag per line.
+	src := "<html>\n<p>\nHello &amp; welcome to\n<b>Example</b>\n.\n</p>\n</html>"
+	out, ok := formatHTMLDocString(src, 0)
+	a.True(ok)
+	a.Equal("<html>\n  <p>\n    Hello &amp; welcome to <b>Example</b> .\n  </p>\n</html>", out)
+
+	// A link with an attribute and a trailing sentence collapses to a single line.
+	src = "<html>\n<p>\nSee\n<a href=\"x\">Example</a>\nfor details.\n</p>\n</html>"
+	out, ok = formatHTMLDocString(src, 0)
+	a.True(ok)
+	a.Equal("<html>\n  <p>\n    See <a href=\"x\">Example</a> for details.\n  </p>\n</html>", out)
+
+	// A void inline element (<br/>) joins the surrounding text on the same line.
+	src = "<html>\n<ul>\n<li>First:<br/>second.</li>\n</ul>\n</html>"
+	out, ok = formatHTMLDocString(src, 0)
+	a.True(ok)
+	a.Equal("<html>\n  <ul>\n    <li>\n      First:<br/>second.\n    </li>\n  </ul>\n</html>", out)
+}
+
 func TestMaybeFormatHTMLString(t *testing.T) {
 	a := require.New(t)
 
@@ -111,11 +134,12 @@ func TestMaybeFormatHTMLString(t *testing.T) {
 	a.False(ok)
 	a.Equal(orig, out)
 
-	// HTML string with escaped quotes: formatted and re-escaped losslessly.
+	// HTML string with escaped quotes: formatted and re-escaped losslessly. The
+	// inline <a> element stays on one line with its text.
 	in := `"<html><a href=\"x\">y</a></html>"`
 	out, ok = maybeFormatHTMLString(in, 0)
 	a.True(ok)
-	a.Equal("\"\n<html>\n  <a href=\\\"x\\\">\n    y\n  </a>\n</html>\"", out)
+	a.Equal("\"\n<html>\n  <a href=\\\"x\\\">y</a>\n</html>\"", out)
 
 	// Malformed HTML string: returned unchanged.
 	bad := `"<html><p>no close"`
