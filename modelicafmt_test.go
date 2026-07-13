@@ -67,3 +67,21 @@ func TestFormattingExamples(t *testing.T) {
 		})
 	}
 }
+
+// TestProcessFileReturnsErrorOnInvalidInput ensures that processFile returns an
+// error when the input cannot be parsed cleanly (e.g. it contains an
+// unrecognized token). This allows callers to avoid overwriting the original
+// file with malformed output (see issue #34).
+func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
+	a := require.New(t)
+
+	invalidContent := "model Test\n  Real x = 1 # bad token;\nequation\n  x = 2;\nend Test;\n"
+	sourceFile := path.Join(outputDir, "invalid-input.mo")
+	a.NoError(os.WriteFile(sourceFile, []byte(invalidContent), 0644))
+	defer os.Remove(sourceFile)
+
+	var out bytes.Buffer
+	err := processFile(sourceFile, &out, Config{-1, false})
+
+	a.Error(err, "processFile should return an error for input with unrecognized tokens")
+}
