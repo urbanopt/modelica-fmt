@@ -1,4 +1,4 @@
-package main
+package format
 
 import (
 	"bytes"
@@ -56,10 +56,11 @@ func TestFormattingExamples(t *testing.T) {
 			defer file.Close()
 
 			// Act
-			err = processFile(
+			err = ProcessFile(
 				testSourceFile,
 				file,
 				testCase.formatterConfig,
+				DialectJinja,
 			)
 
 			// Assert
@@ -84,7 +85,7 @@ func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
 	defer os.Remove(sourceFile)
 
 	var out bytes.Buffer
-	err := processFile(sourceFile, &out, Config{-1, false, false})
+	err := ProcessFile(sourceFile, &out, Config{-1, false, false}, DialectJinja)
 
 	a.Error(err, "processFile should return an error for input with unrecognized tokens")
 }

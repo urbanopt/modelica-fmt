@@ -1,7 +1,7 @@
 // Copyright (c) 2020, Alliance for Sustainable Energy, LLC.
 // All rights reserved.
 
-package main
+package format
 
 import (
 	"bufio"
@@ -22,6 +22,17 @@ type Config struct {
 	// kept inline; the outer `max(N-2, 1)` dimension levels are broken. See
 	// issue #29.
 	wrapArrays bool
+}
+
+// NewConfig builds a Config from the formatter's tunable options. It exists so
+// that callers outside this package (e.g. the CLI) can construct a Config
+// without needing the unexported fields to be exported.
+func NewConfig(maxLineLength int, emptyLines, wrapArrays bool) Config {
+	return Config{
+		maxLineLength: maxLineLength,
+		emptyLines:    emptyLines,
+		wrapArrays:    wrapArrays,
+	}
 }
 
 const (
@@ -640,11 +651,12 @@ func (l *parseErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingS
 	l.errors = append(l.errors, fmt.Sprintf("line %d:%d %s", line, column, msg))
 }
 
-// processFile formats a file. Plain Modelica files (.mo) are formatted directly;
+// ProcessFile formats a file. Plain Modelica files (.mo) are formatted directly;
 // template files (.mot) are routed through the template pipeline which makes the
 // file temporarily parseable, formats it, and then restores the template
-// constructs (see template.go).
-func processFile(filename string, out io.Writer, config Config) error {
+// constructs (see template.go). dialect selects the template dialect used for
+// .mot files (see DialectJinja); it is ignored for plain .mo files.
+func ProcessFile(filename string, out io.Writer, config Config, dialect string) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -652,7 +664,7 @@ func processFile(filename string, out io.Writer, config Config) error {
 
 	text := string(content)
 	if isTemplateFile(filename) {
-		return processTemplate(text, out, config, *templateFlag, filename)
+		return processTemplate(text, out, config, dialect, filename)
 	}
 	return formatModelica(text, out, config, filename)
 }

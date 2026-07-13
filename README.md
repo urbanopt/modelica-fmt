@@ -43,8 +43,8 @@ annotations are left unchanged.
 To try the formatter against the bundled test data:
 
 ```bash
-./modelica-fmt testdata/gmt-building.mo > testdata/gmt-building-out.mo
-./modelica-fmt testdata/gmt-coolingtower.mo > testdata/gmt-coolingtower-out.mo
+./modelica-fmt internal/format/testdata/gmt-building.mo > internal/format/testdata/gmt-building-out.mo
+./modelica-fmt internal/format/testdata/gmt-coolingtower.mo > internal/format/testdata/gmt-coolingtower-out.mo
 ```
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.

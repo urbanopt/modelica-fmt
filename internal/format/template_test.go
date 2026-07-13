@@ -1,4 +1,4 @@
-package main
+package format
 
 import (
 	"bytes"
@@ -42,7 +42,7 @@ func TestFormattingTemplateExamples(t *testing.T) {
 			a.NoError(err)
 			defer file.Close()
 
-			err = processFile(testSourceFile, file, testCase.formatterConfig)
+			err = ProcessFile(testSourceFile, file, testCase.formatterConfig, DialectJinja)
 			a.NoError(err)
 
 			diff, err := diffFiles(expectedOutFile, actualOutFile)
@@ -60,7 +60,7 @@ func TestTemplateFormattingIsIdempotent(t *testing.T) {
 		t.Run(testCase.outFile, func(t *testing.T) {
 			formattedFile := path.Join("testdata", testCase.outFile)
 			var out bytes.Buffer
-			err := processFile(formattedFile, &out, testCase.formatterConfig)
+			err := ProcessFile(formattedFile, &out, testCase.formatterConfig, DialectJinja)
 			a.NoError(err)
 
 			expected, err := os.ReadFile(formattedFile)
@@ -80,7 +80,7 @@ func TestTemplatePreservesNonWhitespaceContent(t *testing.T) {
 			a.NoError(err)
 
 			var out bytes.Buffer
-			err = processFile(path.Join("testdata", testCase.sourceFile), &out, testCase.formatterConfig)
+			err = ProcessFile(path.Join("testdata", testCase.sourceFile), &out, testCase.formatterConfig, DialectJinja)
 			a.NoError(err)
 
 			a.Equal(stripWhitespace(string(source)), stripWhitespace(out.String()),
@@ -124,7 +124,7 @@ func TestTemplateUnformattableReturnsError(t *testing.T) {
 	for _, testCase := range unformattableTemplateTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
 			var out bytes.Buffer
-			err := processFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false})
+			err := ProcessFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false}, DialectJinja)
 			a.Error(err, "known-unformattable .mot should return an error: %s", testCase.reason)
 			a.Empty(out.String(), "no output should be produced when formatting fails")
 		})
@@ -137,7 +137,7 @@ func TestTemplateUnformattableReturnsError(t *testing.T) {
 func TestNonModelicaTemplateIsNotEmptied(t *testing.T) {
 	a := require.New(t)
 	var out bytes.Buffer
-	err := processFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false})
+	err := ProcessFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false}, DialectJinja)
 	a.Error(err)
 	a.Contains(err.Error(), "refusing to write empty output")
 }
@@ -147,7 +147,7 @@ func TestSubstituteReverseRoundTrip(t *testing.T) {
 	original := "within {{ project_name }}.Foo;\n{% if x %}Real a=1;{% else %}Real a=2;{% endif %}\n"
 
 	sub := newSubMap()
-	substituted, err := substituteTemplate(dialectJinja, original, sub)
+	substituted, err := substituteTemplate(DialectJinja, original, sub)
 	a.NoError(err)
 	// Control statements are commented out; expressions become bare identifiers.
 	a.NotContains(substituted, "{%")
@@ -168,7 +168,7 @@ func TestRawBlockLeavesExpressionsUntouched(t *testing.T) {
 	original := "a={{ outside }}\n{% raw %}b={{ inside }}{% endraw %}\n"
 
 	sub := newSubMap()
-	substituted, err := substituteTemplate(dialectJinja, original, sub)
+	substituted, err := substituteTemplate(DialectJinja, original, sub)
 	a.NoError(err)
 
 	// The literal expression inside the raw block must remain untouched.

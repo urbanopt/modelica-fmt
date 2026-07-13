@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/urbanopt/modelica-fmt/internal/format"
 )
 
 var (
@@ -19,7 +21,7 @@ var (
 	versionFlag   = flag.Bool("v", false, "display tool version")
 	emptyLineFlag = flag.Bool("extra-padding", false, "BETA: adds empty lines for padding")
 	lineLength    = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
-	templateFlag  = flag.String("template", dialectJinja, "template dialect for .mot files (jinja)")
+	templateFlag  = flag.String("template", format.DialectJinja, "template dialect for .mot files (jinja)")
 	wrapArrays    = flag.Bool("wrap-arrays", false, "wrap multidimensional arrays ({...}) across multiple lines (outside annotations)")
 	// hadError is set to true when a file could not be processed, so the
 	// program can exit with a non-zero status without aborting other files
@@ -49,7 +51,7 @@ func isModelicaFile(f os.FileInfo) bool {
 
 func processAndWriteFile(filename string) {
 	var b bytes.Buffer
-	err := processFile(filename, &b, Config{*lineLength, *emptyLineFlag, *wrapArrays})
+	err := format.ProcessFile(filename, &b, format.NewConfig(*lineLength, *emptyLineFlag, *wrapArrays), *templateFlag)
 	if err != nil {
 		// The file could not be parsed cleanly (e.g. it contains an
 		// unrecognized token). Leave the original file untouched and report

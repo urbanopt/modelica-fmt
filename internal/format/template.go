@@ -1,7 +1,7 @@
 // Copyright (c) 2020, Alliance for Sustainable Energy, LLC.
 // All rights reserved.
 
-package main
+package format
 
 import (
 	"bytes"
@@ -13,7 +13,8 @@ import (
 
 // Template dialects supported for .mot (templated Modelica) files.
 const (
-	dialectJinja = "jinja"
+	// DialectJinja is the Jinja template dialect used by geojson-modelica-translator.
+	DialectJinja = "jinja"
 )
 
 // Jinja templating constructs are not valid Modelica, so a .mot file cannot be
@@ -127,7 +128,7 @@ func substituteJinja(text string, sub *subMap) string {
 // substituteTemplate applies the substitution strategy for the requested dialect.
 func substituteTemplate(dialect, text string, sub *subMap) (string, error) {
 	switch dialect {
-	case dialectJinja, "":
+	case DialectJinja, "":
 		return substituteJinja(text, sub), nil
 	default:
 		return "", fmt.Errorf("unsupported template dialect %q (supported: jinja)", dialect)

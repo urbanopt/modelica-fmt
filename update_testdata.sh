@@ -3,13 +3,13 @@ set -e
 
 go build .
 
-for file in ./testdata/*.mo; do
+for file in ./internal/format/testdata/*.mo; do
     if [[ $file == *-out.mo ]]; then
         continue
     fi
     filename=$(basename -- $file)
     outfile="${filename%.*}-out.mo"
-    ./modelica-fmt $file > ./testdata/${outfile}
+    ./modelica-fmt $file > ./internal/format/testdata/${outfile}
 done
 
 # Templated Modelica (.mot) test data. Some templates cannot be formatted even
@@ -17,7 +17,7 @@ done
 # kept as fixtures to exercise graceful failure and have no *-out.mot output.
 skip_mot=(gmt-district-energy-system.mot gmt-hptrio-variable-dist.mot gmt-run-spawn-building.mot)
 
-for file in ./testdata/*.mot; do
+for file in ./internal/format/testdata/*.mot; do
     if [[ $file == *-out.mot ]]; then
         continue
     fi
@@ -33,5 +33,5 @@ for file in ./testdata/*.mot; do
         continue
     fi
     outfile="${filename%.*}-out.mot"
-    ./modelica-fmt $file > ./testdata/${outfile}
+    ./modelica-fmt $file > ./internal/format/testdata/${outfile}
 done
