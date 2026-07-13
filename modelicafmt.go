@@ -532,7 +532,10 @@ func (l *parseErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingS
 	l.errors = append(l.errors, fmt.Sprintf("line %d:%d %s", line, column, msg))
 }
 
-// processFile formats a file
+// processFile formats a file. Plain Modelica files (.mo) are formatted directly;
+// template files (.mot) are routed through the template pipeline which makes the
+// file temporarily parseable, formats it, and then restores the template
+// constructs (see template.go).
 func processFile(filename string, out io.Writer, config Config) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -540,6 +543,15 @@ func processFile(filename string, out io.Writer, config Config) error {
 	}
 
 	text := string(content)
+	if isTemplateFile(filename) {
+		return processTemplate(text, out, config, *templateFlag, filename)
+	}
+	return formatModelica(text, out, config, filename)
+}
+
+// formatModelica formats a string of Modelica source, writing the result to out.
+// filename is used only for error reporting.
+func formatModelica(text string, out io.Writer, config Config, filename string) error {
 	inputStream := antlr.NewInputStream(text)
 	lexer := parser.NewModelicaLexer(inputStream)
 

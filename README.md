@@ -7,7 +7,8 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 ```bash
 modelica-fmt [-w] [-help] <sources>...
 Options:
-  -w  overwrite source with formatted output. If flag is not present print to stdout
+  -w         overwrite source with formatted output. If flag is not present print to stdout
+  -template  template dialect used for .mot files (currently: jinja)
 Arguments:
   sources  one or more files or directories to format
 ```
@@ -20,6 +21,36 @@ To run the examples:
 ```
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
+
+## Templated Modelica (`.mot`) files
+
+`modelica-fmt` can also format Modelica **template** files (`.mot`) — as used by
+[geojson-modelica-translator (GMT)](https://github.com/urbanopt/geojson-modelica-translator) —
+which embed [Jinja](https://jinja.palletsprojects.com/) constructs (`{{ ... }}`, `{% ... %}`)
+that aren't valid Modelica on their own. Files ending in `.mot` are detected automatically,
+including during directory walks, so no extra flag is required:
+
+```bash
+./modelica-fmt -w path/to/Template.mot
+./modelica-fmt -w path/to/templates/   # formats .mo and .mot files found in the tree
+```
+
+Internally this uses a substitute → format → reverse round trip: every Jinja construct is
+temporarily replaced with a placeholder that the Modelica lexer accepts (control statements
+`{% ... %}` are commented out, expressions `{{ ... }}` become bare identifiers, and
+`{% raw %} ... {% endraw %}` blocks are preserved verbatim), the file is formatted, and then
+the original template constructs are restored. Formatting is idempotent and only affects
+whitespace/layout — template constructs are preserved exactly.
+
+The template dialect is selectable with `-template` (currently only `jinja` is supported):
+
+```bash
+./modelica-fmt -w -template jinja path/to/Template.mot
+```
+
+Some templates cannot be made parseable through preprocessing alone (for example GMT's
+`DistrictEnergySystem.mot`). For those, `modelica-fmt` reports an error and leaves the file
+unchanged rather than emitting garbled output.
 
 ## Usage with pre-commit framework
 
@@ -34,7 +65,7 @@ Also, make sure to allow modelicafmt to run (especially on Mac).
     id: modelica-fmt
     name: Modelica Formatter
     types: [file]
-    files: \.(mo)$
+    files: \.(mo|mot)$
     entry: modelicafmt
     args: ["-w"]
     language: system
