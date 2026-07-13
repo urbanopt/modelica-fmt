@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -77,7 +78,7 @@ func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
 
 	invalidContent := "model Test\n  Real x = 1 # bad token;\nequation\n  x = 2;\nend Test;\n"
 	sourceFile := path.Join(outputDir, "invalid-input.mo")
-	a.NoError(os.WriteFile(sourceFile, []byte(invalidContent), 0644))
+	a.NoError(ioutil.WriteFile(sourceFile, []byte(invalidContent), 0644))
 	defer os.Remove(sourceFile)
 
 	var out bytes.Buffer
