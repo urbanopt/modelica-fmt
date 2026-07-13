@@ -20,15 +20,15 @@ var templateFileTests = []struct {
 	formatterConfig Config
 }{
 	// simple {{ ... }} expressions
-	{"gmt-boiler-polynomial.mot", "gmt-boiler-polynomial-out.mot", Config{-1, false}},
+	{"gmt-boiler-polynomial.mot", "gmt-boiler-polynomial-out.mot", Config{-1, false, false}},
 	// {% if %}/{% else %}/{% endif %} control statements plus expressions
-	{"gmt-design-data-series.mot", "gmt-design-data-series-out.mot", Config{-1, false}},
+	{"gmt-design-data-series.mot", "gmt-design-data-series-out.mot", Config{-1, false, false}},
 	// {% raw %} ... {% endraw %} blocks interleaved with expressions
-	{"gmt-cooling-indirect.mot", "gmt-cooling-indirect-out.mot", Config{-1, false}},
+	{"gmt-cooling-indirect.mot", "gmt-cooling-indirect-out.mot", Config{-1, false, false}},
 	// {% for %} loops + a filter expression + many {% raw %} blocks (SpawnBuilding)
-	{"gmt-spawn-building.mot", "gmt-spawn-building-out.mot", Config{-1, false}},
+	{"gmt-spawn-building.mot", "gmt-spawn-building-out.mot", Config{-1, false, false}},
 	// {% if %} control plus a dozen {% raw %} blocks in a large file (TimeSeriesBuilding)
-	{"gmt-time-series-building.mot", "gmt-time-series-building-out.mot", Config{-1, false}},
+	{"gmt-time-series-building.mot", "gmt-time-series-building-out.mot", Config{-1, false, false}},
 }
 
 func TestFormattingTemplateExamples(t *testing.T) {
@@ -124,7 +124,7 @@ func TestTemplateUnformattableReturnsError(t *testing.T) {
 	for _, testCase := range unformattableTemplateTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
 			var out bytes.Buffer
-			err := processFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false})
+			err := processFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false})
 			a.Error(err, "known-unformattable .mot should return an error: %s", testCase.reason)
 			a.Empty(out.String(), "no output should be produced when formatting fails")
 		})
@@ -137,7 +137,7 @@ func TestTemplateUnformattableReturnsError(t *testing.T) {
 func TestNonModelicaTemplateIsNotEmptied(t *testing.T) {
 	a := require.New(t)
 	var out bytes.Buffer
-	err := processFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false})
+	err := processFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false})
 	a.Error(err)
 	a.Contains(err.Error(), "refusing to write empty output")
 }
