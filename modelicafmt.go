@@ -206,6 +206,12 @@ type modelicaListener struct {
 	inVector          int  // counts number of current or ancestor contexts that are vector
 	inLastSemicolon   bool // true if the listener is handling the last_semicolon rule
 
+	// htmlErrors collects problems encountered while formatting embedded HTML
+	// annotation strings (only when config.formatHTML is enabled). A non-empty
+	// slice causes processFile to fail so the malformed HTML is reported clearly
+	// instead of being silently left unformatted.
+	htmlErrors []string
+
 	// Other config
 	config Config
 }
@@ -393,7 +399,15 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 	}
 
 	if l.config.formatHTML && node.GetSymbol().GetTokenType() == parser.ModelicaLexerSTRING {
-		if formatted, ok := maybeFormatHTMLString(node.GetText(), l.indentation()+1); ok {
+		formatted, ok, err := maybeFormatHTMLString(node.GetText(), l.indentation()+1)
+		if err != nil {
+			// The string is an HTML docstring (starts with <html>) but could not
+			// be formatted because it is malformed/unbalanced. Record a clear
+			// error so processFile fails loudly rather than silently emitting the
+			// HTML unformatted, and leave the original token unchanged.
+			l.htmlErrors = append(l.htmlErrors, err.Error())
+		}
+		if ok {
 			l.writeHTMLString(formatted)
 		} else {
 			l.writeString(node.GetText())
@@ -600,6 +614,13 @@ func processFile(filename string, out io.Writer, config Config) error {
 	// caller can avoid overwriting the original file with malformed output
 	if len(errorListener.errors) > 0 {
 		return fmt.Errorf("%s: %s", filename, strings.Join(errorListener.errors, "; "))
+	}
+
+	// if any embedded HTML annotation strings were malformed (only possible when
+	// --format-html is enabled), report them clearly and leave the file unchanged
+	// rather than silently emitting unformatted HTML
+	if len(listener.htmlErrors) > 0 {
+		return fmt.Errorf("%s: malformed HTML in annotation string: %s", filename, strings.Join(listener.htmlErrors, "; "))
 	}
 
 	return nil

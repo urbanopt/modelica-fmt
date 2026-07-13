@@ -26,7 +26,6 @@ model Example
             </li>
           </ul>
         </html>"),
-    __partial="<html><p>partial without a closing tag",
     experiment(
       StopTime=1));
 end Example;

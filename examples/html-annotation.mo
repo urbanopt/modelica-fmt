@@ -20,6 +20,5 @@ for more details and a four-pipe fan coil unit model derived from the base class
 <li>January 1, 2020, by Someone:<br/>Initial implementation.</li>
 </ul>
 </html>"),
-    __partial="<html><p>partial without a closing tag",
     experiment(StopTime=1));
 end Example;

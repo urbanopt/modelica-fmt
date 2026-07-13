@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -168,9 +169,11 @@ func collapseInlineWhitespace(s string) string {
 // Tag/attribute/entity/text bytes are preserved exactly; only whitespace changes.
 // Whitespace-sensitive elements (pre/textarea/script/style) are emitted verbatim.
 //
-// It returns ok=false (and the caller should leave the original untouched) when the
-// HTML is malformed or unbalanced, so a bad docstring is never corrupted.
-func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
+// It returns a non-nil error (and the caller should leave the original untouched)
+// when the HTML is malformed or unbalanced, so a bad docstring is never corrupted.
+// The error explains what was wrong (e.g. an unexpected closing tag or an unclosed
+// element) so the failure can be reported clearly.
+func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 	z := html.NewTokenizer(strings.NewReader(decoded))
 	var lines []string
 	var stack []string
@@ -195,7 +198,7 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 			if z.Err() == io.EOF {
 				break
 			}
-			return "", false
+			return "", fmt.Errorf("HTML tokenizer error: %v", z.Err())
 		}
 		raw := string(z.Raw())
 
@@ -213,9 +216,9 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 			name := htmlTagName(raw)
 			if preserveElements[name] {
 				flushInline()
-				block, ok := capturePreserved(z, name, raw)
-				if !ok {
-					return "", false
+				block, err := capturePreserved(z, name, raw)
+				if err != nil {
+					return "", err
 				}
 				lines = append(lines, indentAt(depth)+block)
 				break
@@ -247,8 +250,11 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 				}
 				break
 			}
-			if len(stack) == 0 || stack[len(stack)-1] != name {
-				return "", false
+			if len(stack) == 0 {
+				return "", fmt.Errorf("unexpected closing tag </%s> (no matching opening tag)", name)
+			}
+			if stack[len(stack)-1] != name {
+				return "", fmt.Errorf("mismatched closing tag </%s> (expected </%s>)", name, stack[len(stack)-1])
 			}
 			stack = stack[:len(stack)-1]
 			if inlineElements[name] {
@@ -267,46 +273,51 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, bool) {
 
 	flushInline()
 	if len(stack) != 0 {
-		return "", false
+		return "", fmt.Errorf("unclosed tag(s): <%s>", strings.Join(stack, ">, <"))
 	}
-	return strings.Join(lines, "\n"), true
+	return strings.Join(lines, "\n"), nil
 }
 
 // capturePreserved consumes tokens verbatim from the tokenizer until the end tag
 // matching name is reached, returning the exact original bytes of the whole element
 // (start tag + inner content + end tag). This keeps whitespace-sensitive content
-// such as <pre> intact.
-func capturePreserved(z *html.Tokenizer, name, startRaw string) (string, bool) {
+// such as <pre> intact. It returns an error if the element is never closed.
+func capturePreserved(z *html.Tokenizer, name, startRaw string) (string, error) {
 	var b strings.Builder
 	b.WriteString(startRaw)
 	for {
 		tt := z.Next()
 		if tt == html.ErrorToken {
-			return "", false
+			return "", fmt.Errorf("unterminated <%s> element", name)
 		}
 		raw := string(z.Raw())
 		b.WriteString(raw)
 		if tt == html.EndTagToken && htmlTagName(raw) == name {
-			return b.String(), true
+			return b.String(), nil
 		}
 	}
 }
 
 // maybeFormatHTMLString inspects a raw Modelica STRING token (including its
-// surrounding quotes). If its content is HTML, it returns a reformatted string
-// literal and ok=true; otherwise it returns the original token unchanged.
-func maybeFormatHTMLString(tokenText string, baseIndent int) (string, bool) {
+// surrounding quotes). Its return values are:
+//   - (formatted, true, nil)  when the content is HTML and was reformatted;
+//   - (tokenText, false, nil) when the content is not an HTML docstring (left as-is);
+//   - (tokenText, false, err) when the content looks like HTML (starts with <html>)
+//     but is malformed/unbalanced. The original token is returned unchanged and the
+//     error describes the problem so the caller can report it clearly instead of
+//     silently emitting unformatted HTML.
+func maybeFormatHTMLString(tokenText string, baseIndent int) (string, bool, error) {
 	if len(tokenText) < 2 || tokenText[0] != '"' || tokenText[len(tokenText)-1] != '"' {
-		return tokenText, false
+		return tokenText, false, nil
 	}
 	inner := tokenText[1 : len(tokenText)-1]
 	decoded := unescapeModelicaString(inner)
 	if !isHTMLContent(decoded) {
-		return tokenText, false
+		return tokenText, false, nil
 	}
-	formatted, ok := formatHTMLDocString(decoded, baseIndent)
-	if !ok {
-		return tokenText, false
+	formatted, err := formatHTMLDocString(decoded, baseIndent)
+	if err != nil {
+		return tokenText, false, err
 	}
-	return "\"\n" + escapeModelicaString(formatted) + "\"", true
+	return "\"\n" + escapeModelicaString(formatted) + "\"", true, nil
 }

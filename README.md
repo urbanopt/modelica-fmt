@@ -65,8 +65,28 @@ This feature is **opt-in** and intentionally conservative:
   `<a href=\"...\">link</a>` is kept condensed instead of exploded one tag per line.
 - Whitespace-sensitive elements (`<pre>`, `<textarea>`, `<script>`, `<style>`) are left
   verbatim.
-- Malformed or unbalanced HTML is left untouched rather than risk corrupting it.
+- Malformed or unbalanced HTML is never reflowed (so it can't be corrupted). Instead the
+  tool reports a clear error naming the offending tag, leaves the file unchanged, and exits
+  non-zero (see [Behavior on malformed HTML](#behavior-on-malformed-html)).
 - HTML lines do not participate in the `--line-length` limit.
+
+### Behavior on malformed HTML
+
+When `--format-html` is enabled and an annotation string looks like HTML (its content
+starts with `<html>`) but is malformed or unbalanced — for example a mismatched or missing
+closing tag — the tool does **not** silently emit it unformatted. It fails with a clear
+message identifying the file and the problem, and leaves the file unchanged:
+
+```console
+$ modelica-fmt --format-html MyModel.mo
+error: MyModel.mo: malformed HTML in annotation string: mismatched closing tag </html> (expected </p>)
+skipping MyModel.mo (file left unchanged)
+```
+
+The process exits non-zero in this case, so the failure is visible in CI and pre-commit
+hooks rather than being silently ignored. Fix the HTML (or run without `--format-html`) and
+re-run. When `--format-html` is disabled, annotation strings are never inspected, so
+malformed HTML has no effect.
 
 ### Known limitations
 
@@ -75,9 +95,9 @@ These are intentional v1 trade-offs, documented here so they are easy to revisit
 - **Inline runs collapse to a single line.** A run of text and inline elements is placed on
   one line (its internal whitespace runs collapsed to single spaces), so a long paragraph
   becomes one long line; it is not wrapped to `--line-length`.
-- **Conservative bail on unbalanced HTML.** HTML with omitted closing tags (e.g. a bare
-  `<li>` or `<p>`) or mismatched tags is left unformatted rather than reflowed, to avoid
-  corrupting content.
+- **Conservative handling of unbalanced HTML.** HTML with omitted closing tags (e.g. a bare
+  `<li>` or `<p>`) or mismatched tags is not reflowed; it is reported as an error and the
+  file is left unchanged rather than reflowed, to avoid corrupting content.
 
 ## Usage with pre-commit framework
 

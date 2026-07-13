@@ -41,6 +41,7 @@ var exampleFileTests = []struct {
 	{"gmt-building.mo", "gmt-building-empty-lines-out.mo", Config{-1, true, false}},
 	{"html-annotation.mo", "html-annotation-out.mo", Config{-1, false, false}},
 	{"html-annotation.mo", "html-annotation-html-out.mo", Config{-1, false, true}},
+	{"html-annotation-malformed.mo", "html-annotation-malformed-out.mo", Config{-1, false, false}},
 	{"gmt-building.mo", "gmt-building-html-out.mo", Config{-1, false, true}},
 }
 
@@ -88,4 +89,26 @@ func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
 	err := processFile(sourceFile, &out, Config{-1, false, false})
 
 	a.Error(err, "processFile should return an error for input with unrecognized tokens")
+}
+
+// TestProcessFileFailsOnMalformedHTMLWhenFormatHTMLEnabled ensures that, when
+// --format-html is enabled, a file containing a malformed/unbalanced HTML
+// annotation string fails with a clear error (and is therefore left unchanged)
+// rather than being silently emitted unformatted.
+func TestProcessFileFailsOnMalformedHTMLWhenFormatHTMLEnabled(t *testing.T) {
+	a := require.New(t)
+
+	sourceFile := path.Join("examples", "html-annotation-malformed.mo")
+
+	// With --format-html enabled, the malformed HTML must be reported clearly.
+	var out bytes.Buffer
+	err := processFile(sourceFile, &out, Config{-1, false, true})
+	a.Error(err, "processFile should fail on malformed HTML when --format-html is enabled")
+	a.Contains(err.Error(), "malformed HTML in annotation string")
+
+	// With --format-html disabled, the HTML is never inspected, so the file
+	// formats successfully.
+	var outOff bytes.Buffer
+	err = processFile(sourceFile, &outOff, Config{-1, false, false})
+	a.NoError(err, "processFile should not inspect HTML when --format-html is disabled")
 }

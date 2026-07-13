@@ -6,7 +6,9 @@
   preserved exactly), block-level elements are indented to their nesting depth while
   inline/phrasing elements (e.g. `<b>`, `<a>`, `<code>`, `<br/>`) and their surrounding text
   stay condensed on one line, whitespace-sensitive elements (`<pre>`, `<textarea>`,
-  `<script>`, `<style>`) are left verbatim, and malformed/unbalanced HTML is left untouched.
+  `<script>`, `<style>`) are left verbatim, and malformed/unbalanced HTML is reported as a
+  clear error (leaving the file unchanged and exiting non-zero) rather than being silently
+  emitted unformatted.
 
 # Version 0.1
 
