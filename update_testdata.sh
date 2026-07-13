@@ -12,26 +12,18 @@ for file in ./internal/format/testdata/*.mo; do
     ./modelica-fmt $file > ./internal/format/testdata/${outfile}
 done
 
-# Templated Modelica (.mot) test data. Some templates cannot be formatted even
-# with preprocessing (see SKIP_FILES in geojson-modelica-translator); they are
-# kept as fixtures to exercise graceful failure and have no *-out.mot output.
-skip_mot=(gmt-district-energy-system.mot gmt-hptrio-variable-dist.mot gmt-run-spawn-building.mot)
+# Golden files for non-default formatter configurations used by
+# internal/format/modelicafmt_test.go.
+./modelica-fmt -wrap-arrays ./internal/format/testdata/example-arrays.mo > ./internal/format/testdata/example-arrays-wrapped-out.mo
+./modelica-fmt -wrap-arrays ./internal/format/testdata/example-arrays-nd.mo > ./internal/format/testdata/example-arrays-nd-out.mo
+./modelica-fmt -line-length 80 ./internal/format/testdata/gmt-building.mo > ./internal/format/testdata/gmt-building-80-out.mo
+./modelica-fmt -extra-padding ./internal/format/testdata/gmt-building.mo > ./internal/format/testdata/gmt-building-empty-lines-out.mo
 
 for file in ./internal/format/testdata/*.mot; do
     if [[ $file == *-out.mot ]]; then
         continue
     fi
     filename=$(basename -- $file)
-    skip=false
-    for s in "${skip_mot[@]}"; do
-        if [[ $filename == "$s" ]]; then
-            skip=true
-            break
-        fi
-    done
-    if [[ $skip == true ]]; then
-        continue
-    fi
     outfile="${filename%.*}-out.mot"
     ./modelica-fmt $file > ./internal/format/testdata/${outfile}
 done

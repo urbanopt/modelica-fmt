@@ -62,12 +62,13 @@ including during directory walks, so no extra flag is required:
 ./modelica-fmt -w path/to/templates/   # formats .mo and .mot files found in the tree
 ```
 
-Internally this uses a substitute → format → reverse round trip: every Jinja construct is
-temporarily replaced with a placeholder that the Modelica lexer accepts (control statements
-`{% ... %}` are commented out, expressions `{{ ... }}` become bare identifiers, and
-`{% raw %} ... {% endraw %}` blocks are preserved verbatim), the file is formatted, and then
-the original template constructs are restored. Formatting is idempotent and only affects
-whitespace/layout — template constructs are preserved exactly.
+Internally this uses a substitute → format → reverse round trip: template constructs are
+temporarily replaced with placeholders that the Modelica lexer accepts (control statements
+`{% ... %}` are commented out, inline expressions such as `{{ ... }}` and `${...}` become
+bare identifiers, and GMT generated-snippet expressions such as `{{ model.instance }}` are
+commented out), the file is formatted, and then the original template constructs are
+restored. Formatting is idempotent and only affects whitespace/layout — template constructs
+are preserved exactly.
 
 The template dialect is selectable with `-template` (currently only `jinja` is supported):
 
@@ -75,9 +76,10 @@ The template dialect is selectable with `-template` (currently only `jinja` is s
 ./modelica-fmt -w -template jinja path/to/Template.mot
 ```
 
-Some templates cannot be made parseable through preprocessing alone (for example GMT's
-`DistrictEnergySystem.mot`). For those, `modelica-fmt` reports an error and leaves the file
-unchanged rather than emitting garbled output.
+Some `.mot` files are not Modelica classes at all, such as Dymola run scripts. When a
+templated `.mot` file still cannot be made parseable through preprocessing, `modelica-fmt`
+emits the original content unchanged rather than failing the whole directory run or writing
+empty output.
 
 ## Usage with pre-commit framework
 
@@ -126,7 +128,6 @@ If the grammar file (Modelica.g4) has been edited, you'll need to regenerate the
 ```
 
 ## Known Issues
-
 
 
 

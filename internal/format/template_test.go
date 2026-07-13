@@ -29,6 +29,9 @@ var templateFileTests = []struct {
 	{"gmt-spawn-building.mot", "gmt-spawn-building-out.mot", Config{-1, false, false}},
 	// {% if %} control plus a dozen {% raw %} blocks in a large file (TimeSeriesBuilding)
 	{"gmt-time-series-building.mot", "gmt-time-series-building-out.mot", Config{-1, false, false}},
+	// {% for %} loop over array elements with a conditional comma.
+	{"gmt-dhc-5g-wh-ghx-hpdirectcooling-variable-dist.mot", "gmt-dhc-5g-wh-ghx-hpdirectcooling-variable-dist-out.mot", Config{-1, false, false}},
+	{"gmt-hptrio-variable-dist.mot", "gmt-hptrio-variable-dist-out.mot", Config{-1, false, false}},
 }
 
 func TestFormattingTemplateExamples(t *testing.T) {
@@ -99,47 +102,45 @@ func TestTemplateUnsupportedDialectReturnsError(t *testing.T) {
 	a.Contains(err.Error(), "mako")
 }
 
-// unformattableTemplateTests are real GMT .mot files that cannot be safely
-// formatted. Each must return an error so the caller leaves the file unchanged
-// rather than emitting garbled or empty output.
-var unformattableTemplateTests = []struct {
+// previouslySkippedTemplateTests are real GMT .mot files that used to fail
+// directory-wide formatting. They should now process without returning an error:
+// Modelica templates are formatted, and non-Modelica .mot scripts are passed
+// through unchanged.
+var previouslySkippedTemplateTests = []struct {
 	sourceFile string
-	reason     string
 }{
-	// matches GMT's SKIP_FILES; preprocessing cannot make it parseable
-	{"gmt-district-energy-system.mot", "DistrictEnergySystem template (GMT SKIP_FILES)"},
-	// {% for %} control tags wrapping braces exceed the substitution heuristic,
-	// producing invalid Modelica that fails to parse
-	{"gmt-hptrio-variable-dist.mot", "for-loop control around braces yields a syntax error"},
-	// a Dymola run-script, not Modelica: the parser matches an empty definition
-	// with no error, so the empty-output guard must reject it
-	{"gmt-run-spawn-building.mot", "non-Modelica Dymola script must not be silently emptied"},
+	{"gmt-district-energy-system.mot"},
+	{"gmt-run-spawn-building.mot"},
 }
 
-// TestTemplateUnformattableReturnsError ensures templates that cannot be made
-// parseable via preprocessing return an error rather than emitting garbled or
-// empty output, so the caller leaves the file unchanged.
-func TestTemplateUnformattableReturnsError(t *testing.T) {
+func TestPreviouslySkippedTemplatesDoNotError(t *testing.T) {
 	a := require.New(t)
-	for _, testCase := range unformattableTemplateTests {
+	for _, testCase := range previouslySkippedTemplateTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
+			source, err := os.ReadFile(path.Join("testdata", testCase.sourceFile))
+			a.NoError(err)
+
 			var out bytes.Buffer
-			err := ProcessFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false}, DialectJinja)
-			a.Error(err, "known-unformattable .mot should return an error: %s", testCase.reason)
-			a.Empty(out.String(), "no output should be produced when formatting fails")
+			err = ProcessFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false}, DialectJinja)
+			a.NoError(err)
+			a.Equal(stripWhitespace(string(source)), stripWhitespace(out.String()),
+				"processing a .mot template must preserve non-whitespace content")
 		})
 	}
 }
 
-// TestNonModelicaTemplateIsNotEmptied specifically guards against silent data
-// loss: a non-empty .mot file that is not actually Modelica must be rejected via
-// the empty-output guard instead of being overwritten with an empty file.
-func TestNonModelicaTemplateIsNotEmptied(t *testing.T) {
+// TestNonModelicaTemplatePassesThrough specifically guards against silent data
+// loss: a non-empty .mot file that is not actually Modelica must be emitted
+// unchanged instead of being overwritten with an empty file.
+func TestNonModelicaTemplatePassesThrough(t *testing.T) {
 	a := require.New(t)
+	source, err := os.ReadFile(path.Join("testdata", "gmt-run-spawn-building.mot"))
+	a.NoError(err)
+
 	var out bytes.Buffer
-	err := ProcessFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false}, DialectJinja)
-	a.Error(err)
-	a.Contains(err.Error(), "refusing to write empty output")
+	err = ProcessFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false}, DialectJinja)
+	a.NoError(err)
+	a.Equal(string(source), out.String())
 }
 
 func TestSubstituteReverseRoundTrip(t *testing.T) {
@@ -178,6 +179,59 @@ func TestRawBlockLeavesExpressionsUntouched(t *testing.T) {
 	// The raw/endraw control tags must be substituted (commented out).
 	a.NotContains(substituted, "{% raw %}")
 	a.NotContains(substituted, "{% endraw %}")
+
+	restored, err := reverseSub(substituted, sub)
+	a.NoError(err)
+	a.Equal(original, restored)
+}
+
+func TestLoopConditionalCommaRoundTrip(t *testing.T) {
+	a := require.New(t)
+	original := `parameter String filNam[nBui]={
+    {% for building in data["building_load_files"] %}
+    "{{ building }}"{% if not loop.last %},{% endif %}
+    {% endfor %}{% raw %}}
+    "Library paths";{% endraw %}`
+
+	sub := newSubMap()
+	substituted, err := substituteTemplate(DialectJinja, original, sub)
+	a.NoError(err)
+
+	a.NotContains(substituted, ",", "conditional loop comma should not leak into temporary Modelica")
+	a.Contains(substituted, `"JINJA_SUB_`)
+
+	restored, err := reverseSub(substituted, sub)
+	a.NoError(err)
+	a.Equal(original, restored)
+}
+
+func TestGeneratedSnippetExpressionsAreCommented(t *testing.T) {
+	a := require.New(t)
+	original := "{{ model.instance }}\n{{ coupling.component_definitions }}\n{{ coupling.connect_statements }}\n{{ data['lCon'] }}\n"
+
+	sub := newSubMap()
+	substituted, err := substituteTemplate(DialectJinja, original, sub)
+	a.NoError(err)
+
+	a.Contains(substituted, "/*JINJA_SUB_001*/")
+	a.Contains(substituted, "/*JINJA_SUB_002*/")
+	a.Contains(substituted, "/*JINJA_SUB_003*/")
+	a.Contains(substituted, "\nJINJA_SUB_004\n")
+
+	restored, err := reverseSub(substituted, sub)
+	a.NoError(err)
+	a.Equal(original, restored)
+}
+
+func TestDollarExpressionRoundTrip(t *testing.T) {
+	a := require.New(t)
+	original := "within ${project_name};\nmodel ${model_name}\n  Real x=${value};\nend ${model_name};\n"
+
+	sub := newSubMap()
+	substituted, err := substituteTemplate(DialectJinja, original, sub)
+	a.NoError(err)
+	a.NotContains(substituted, "${")
+	a.Contains(substituted, "within JINJA_SUB_001;")
 
 	restored, err := reverseSub(substituted, sub)
 	a.NoError(err)
