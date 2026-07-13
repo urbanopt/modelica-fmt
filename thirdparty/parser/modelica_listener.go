@@ -1,8 +1,9 @@
-// Code generated from /var/antlrResult/Modelica.g4 by ANTLR 4.8. DO NOT EDIT.
+// Code generated from /var/antlrResult/Modelica.g4 by ANTLR 4.13.2. DO NOT EDIT.
 
 package parser // Modelica
 
-import "github.com/antlr/antlr4/runtime/Go/antlr"
+import "github.com/antlr4-go/antlr/v4"
+
 
 // ModelicaListener is a complete listener for a parse tree produced by ModelicaParser.
 type ModelicaListener interface {

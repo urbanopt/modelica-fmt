@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/antlr4-go/antlr/v4"
 	"github.com/urbanopt/modelica-fmt/thirdparty/parser"
 )
 
@@ -440,7 +440,7 @@ func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
 	l.inVector++
 	if l.inModelAnnotation > 0 {
 		// if this array uses an iterator for construction it gets no special treatment
-		if _, ok := node.GetChild(0).(parser.Array_iterator_constructorContext); ok {
+		if _, ok := node.GetChild(0).(*parser.Array_iterator_constructorContext); ok {
 			return
 		}
 
