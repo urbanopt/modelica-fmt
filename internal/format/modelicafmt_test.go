@@ -1,4 +1,4 @@
-package main
+package format
 
 import (
 	"bytes"
@@ -32,17 +32,19 @@ var exampleFileTests = []struct {
 	outFile         string
 	formatterConfig Config
 }{
-	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", Config{-1, false, false}},
-	{"functions.mo", "functions-out.mo", Config{-1, false, false}},
-	{"example-no-within.mo", "example-no-within-out.mo", Config{-1, false, false}},
-	{"example-arrays.mo", "example-arrays-out.mo", Config{-1, false, false}},
-	{"gmt-building.mo", "gmt-building-out.mo", Config{-1, false, false}},
-	{"gmt-building.mo", "gmt-building-80-out.mo", Config{80, false, false}},
-	{"gmt-building.mo", "gmt-building-empty-lines-out.mo", Config{-1, true, false}},
-	{"html-annotation.mo", "html-annotation-out.mo", Config{-1, false, false}},
-	{"html-annotation.mo", "html-annotation-html-out.mo", Config{-1, false, true}},
-	{"html-annotation-malformed.mo", "html-annotation-malformed-out.mo", Config{-1, false, false}},
-	{"gmt-building.mo", "gmt-building-html-out.mo", Config{-1, false, true}},
+	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", Config{-1, false, false, false}},
+	{"functions.mo", "functions-out.mo", Config{-1, false, false, false}},
+	{"example-no-within.mo", "example-no-within-out.mo", Config{-1, false, false, false}},
+	{"example-arrays.mo", "example-arrays-out.mo", Config{-1, false, false, false}},
+	{"example-arrays.mo", "example-arrays-wrapped-out.mo", Config{-1, false, true, false}},
+	{"example-arrays-nd.mo", "example-arrays-nd-out.mo", Config{-1, false, true, false}},
+	{"gmt-building.mo", "gmt-building-out.mo", Config{-1, false, false, false}},
+	{"gmt-building.mo", "gmt-building-80-out.mo", Config{80, false, false, false}},
+	{"gmt-building.mo", "gmt-building-empty-lines-out.mo", Config{-1, true, false, false}},
+	{"html-annotation.mo", "html-annotation-out.mo", Config{-1, false, false, false}},
+	{"html-annotation.mo", "html-annotation-html-out.mo", Config{-1, false, false, true}},
+	{"html-annotation-malformed.mo", "html-annotation-malformed-out.mo", Config{-1, false, false, false}},
+	{"gmt-building.mo", "gmt-building-html-out.mo", Config{-1, false, false, true}},
 }
 
 func TestFormattingExamples(t *testing.T) {
@@ -50,18 +52,19 @@ func TestFormattingExamples(t *testing.T) {
 	for _, testCase := range exampleFileTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
 			// Setup
-			testSourceFile := path.Join("examples", testCase.sourceFile)
-			expectedOutFile := path.Join("examples", testCase.outFile)
+			testSourceFile := path.Join("testdata", testCase.sourceFile)
+			expectedOutFile := path.Join("testdata", testCase.outFile)
 			actualOutFile := path.Join(outputDir, testCase.outFile)
 			file, err := os.Create(actualOutFile)
 			a.NoError(err)
 			defer file.Close()
 
 			// Act
-			err = processFile(
+			err = ProcessFile(
 				testSourceFile,
 				file,
 				testCase.formatterConfig,
+				DialectJinja,
 			)
 
 			// Assert
@@ -86,7 +89,7 @@ func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
 	defer os.Remove(sourceFile)
 
 	var out bytes.Buffer
-	err := processFile(sourceFile, &out, Config{-1, false, false})
+	err := ProcessFile(sourceFile, &out, Config{-1, false, false, false}, DialectJinja)
 
 	a.Error(err, "processFile should return an error for input with unrecognized tokens")
 }
@@ -98,17 +101,17 @@ func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {
 func TestProcessFileFailsOnMalformedHTMLWhenFormatHTMLEnabled(t *testing.T) {
 	a := require.New(t)
 
-	sourceFile := path.Join("examples", "html-annotation-malformed.mo")
+	sourceFile := path.Join("testdata", "html-annotation-malformed.mo")
 
-	// With --format-html enabled, the malformed HTML must be reported clearly.
+	// With formatHTML enabled, the malformed HTML must be reported clearly.
 	var out bytes.Buffer
-	err := processFile(sourceFile, &out, Config{-1, false, true})
-	a.Error(err, "processFile should fail on malformed HTML when --format-html is enabled")
+	err := ProcessFile(sourceFile, &out, Config{-1, false, false, true}, DialectJinja)
+	a.Error(err, "ProcessFile should fail on malformed HTML when formatHTML is enabled")
 	a.Contains(err.Error(), "malformed HTML in annotation string")
 
-	// With --format-html disabled, the HTML is never inspected, so the file
+	// With formatHTML disabled, the HTML is never inspected, so the file
 	// formats successfully.
 	var outOff bytes.Buffer
-	err = processFile(sourceFile, &outOff, Config{-1, false, false})
-	a.NoError(err, "processFile should not inspect HTML when --format-html is disabled")
+	err = ProcessFile(sourceFile, &outOff, Config{-1, false, false, false}, DialectJinja)
+	a.NoError(err, "ProcessFile should not inspect HTML when formatHTML is disabled")
 }

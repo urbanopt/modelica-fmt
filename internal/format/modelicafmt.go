@@ -1,7 +1,7 @@
 // Copyright (c) 2020, Alliance for Sustainable Energy, LLC.
 // All rights reserved.
 
-package main
+package format
 
 import (
 	"bufio"
@@ -17,7 +17,26 @@ import (
 type Config struct {
 	maxLineLength int
 	emptyLines    bool
-	formatHTML    bool
+	// wrapArrays, when true, breaks multidimensional arrays (`{...}`) across
+	// multiple lines outside of annotations. The innermost two dimensions are
+	// kept inline; the outer `max(N-2, 1)` dimension levels are broken. See
+	// issue #29.
+	wrapArrays bool
+	// formatHTML, when true, pretty-prints HTML content embedded in annotation
+	// strings (e.g. Documentation info/revisions). See issue #40.
+	formatHTML bool
+}
+
+// NewConfig builds a Config from the formatter's tunable options. It exists so
+// that callers outside this package (e.g. the CLI) can construct a Config
+// without needing the unexported fields to be exported.
+func NewConfig(maxLineLength int, emptyLines, wrapArrays, formatHTML bool) Config {
+	return Config{
+		maxLineLength: maxLineLength,
+		emptyLines:    emptyLines,
+		wrapArrays:    wrapArrays,
+		formatHTML:    formatHTML,
+	}
 }
 
 const (
@@ -47,21 +66,28 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 		parser.INamed_argumentContext:
 		return 0 == l.inAnnotation || 0 < l.inModelAnnotation
 	case parser.IExpressionContext:
-		if len(l.modelAnnotationVectorStack) == 0 {
-			return false
+		if len(l.modelAnnotationVectorStack) > 0 {
+			// handle expression which is an element of a vector (array_arguments) and within model annotation
+			arrayArgumentsNode, ok := rule.GetParent().(*parser.Array_argumentsContext)
+			if !ok {
+				return false
+			}
+
+			// check if the vector is the same as the one on top of our stack
+			thisVectorInterval := arrayArgumentsNode.GetParent().(*parser.VectorContext).GetSourceInterval()
+			stackVectorInterval := l.modelAnnotationVectorStack[len(l.modelAnnotationVectorStack)-1].GetSourceInterval()
+			return thisVectorInterval.Start == stackVectorInterval.Start && thisVectorInterval.Stop == stackVectorInterval.Stop
 		}
 
-		// handle expression which is an element of a vector (array_arguments) and within model annotation
-		arrayArgumentsNode, ok := rule.GetParent().(*parser.Array_argumentsContext)
-		if !ok {
-			return false
-		}
-
-		// check if the vector is the same as the one on top of our stack
-		thisVectorInterval := arrayArgumentsNode.GetParent().(*parser.VectorContext).GetSourceInterval()
-		stackVectorInterval := l.modelAnnotationVectorStack[len(l.modelAnnotationVectorStack)-1].GetSourceInterval()
-		if thisVectorInterval.Start == stackVectorInterval.Start && thisVectorInterval.Stop == stackVectorInterval.Stop {
-			return true
+		// handle expression which is a direct element of a multidimensional array
+		// that should be wrapped across lines (see issue #29). This only applies
+		// outside of annotations, where arrays are kept on a single line.
+		if l.config.wrapArrays && l.inAnnotation == 0 {
+			if arrayArgumentsNode, ok := rule.GetParent().(*parser.Array_argumentsContext); ok {
+				if vectorNode, ok := arrayArgumentsNode.GetParent().(*parser.VectorContext); ok {
+					return l.wrapVectors[vectorNode]
+				}
+			}
 		}
 		return false
 	case parser.IFunction_argumentContext:
@@ -197,6 +223,13 @@ type modelicaListener struct {
 	// should be indented or not by checking if the top of the stack is its ancestor
 	modelAnnotationVectorStack []antlr.RuleContext
 
+	// wrapVectors is the set of `vector` contexts whose direct elements should
+	// be broken onto their own indented lines. It is populated when entering the
+	// outermost vector of a multidimensional array (outside annotations) if the
+	// wrapArrays config option is enabled, and cleared when that outermost vector
+	// is exited. See issue #29 and shouldWrapVector.
+	wrapVectors map[*parser.VectorContext]bool
+
 	// NOTE: consider refactoring this simple approach for context awareness with
 	// a set.
 	// It should probably be map[string]int for rule name and current count (rules can be recursive, ie inside the same rule multiple times)
@@ -233,6 +266,7 @@ func newListener(out io.Writer, commentTokens []antlr.Token, config Config) *mod
 		previousTokenIdx:     -1,
 		commentTokens:        commentTokens,
 		currentLineLength:    0,
+		wrapVectors:          map[*parser.VectorContext]bool{},
 		config:               config,
 	}
 }
@@ -476,7 +510,19 @@ func (l *modelicaListener) ExitModel_annotation(node *parser.Model_annotationCon
 }
 
 func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
+	// Determine whether this is the outermost vector before incrementing the
+	// counter (an outermost array has no enclosing vector).
+	isOutermostVector := l.inVector == 0
 	l.inVector++
+
+	// When array wrapping is enabled and we're outside of an annotation, compute
+	// the set of vectors whose elements should be broken onto separate lines. We
+	// only do this once, at the outermost vector, and recurse over the whole
+	// array so that indentation state is available while walking its children.
+	if l.config.wrapArrays && l.inAnnotation == 0 && isOutermostVector {
+		l.markWrapVectors(node, true)
+	}
+
 	if l.inModelAnnotation > 0 {
 		// if this array uses an iterator for construction it gets no special treatment
 		if _, ok := node.GetChild(0).(*parser.Array_iterator_constructorContext); ok {
@@ -500,6 +546,12 @@ func (l *modelicaListener) EnterVector(node *parser.VectorContext) {
 
 func (l *modelicaListener) ExitVector(node *parser.VectorContext) {
 	l.inVector--
+
+	// clear the wrap set once we've exited the outermost vector
+	if l.inVector == 0 && len(l.wrapVectors) > 0 {
+		l.wrapVectors = map[*parser.VectorContext]bool{}
+	}
+
 	if len(l.modelAnnotationVectorStack) > 0 {
 		annotationVectorInterval := l.modelAnnotationVectorStack[len(l.modelAnnotationVectorStack)-1].GetSourceInterval()
 		thisVectorInterval := node.GetSourceInterval()
@@ -507,6 +559,76 @@ func (l *modelicaListener) ExitVector(node *parser.VectorContext) {
 			l.modelAnnotationVectorStack = l.modelAnnotationVectorStack[:len(l.modelAnnotationVectorStack)-1]
 		}
 	}
+}
+
+// expressionAsVector returns the VectorContext that an expression consists of,
+// if the expression is purely a vector literal (e.g. an element of a
+// multidimensional array like `{1, 2}` in `{{1, 2}, {3, 4}}`). It returns nil
+// if the expression is anything else (a scalar, an arithmetic expression, a
+// function call, etc). It works by descending the single-child expression chain
+// (expression -> ... -> primary -> vector); any node with more than one child
+// means the expression is not a bare vector.
+func expressionAsVector(node antlr.Tree) *parser.VectorContext {
+	for node != nil {
+		if vectorNode, ok := node.(*parser.VectorContext); ok {
+			return vectorNode
+		}
+		if node.GetChildCount() != 1 {
+			return nil
+		}
+		node = node.GetChild(0)
+	}
+	return nil
+}
+
+// directElementVectors returns the vectors which are direct elements of the
+// given vector (i.e. the sub-arrays of a multidimensional array). Elements which
+// are not bare vectors (scalars, expressions, iterator constructors, ...) are
+// skipped.
+func directElementVectors(node *parser.VectorContext) []*parser.VectorContext {
+	arrayArguments := node.Array_arguments()
+	if arrayArguments == nil {
+		return nil
+	}
+
+	var vectors []*parser.VectorContext
+	for _, child := range arrayArguments.GetChildren() {
+		expressionNode, ok := child.(*parser.ExpressionContext)
+		if !ok {
+			continue
+		}
+		if vectorNode := expressionAsVector(expressionNode); vectorNode != nil {
+			vectors = append(vectors, vectorNode)
+		}
+	}
+	return vectors
+}
+
+// markWrapVectors walks a multidimensional array and records, in l.wrapVectors,
+// which vectors should have their direct elements broken onto separate lines. It
+// returns the array nesting depth of the given vector (1 for a vector of
+// scalars, 2 for a vector of such vectors, etc).
+//
+// A vector's elements are wrapped when either:
+//   - its depth is >= 3 (there are more than two dimensions below it), or
+//   - its depth is 2 and it is the outermost array.
+//
+// This keeps the innermost two dimensions inline while breaking the outer
+// max(N-2, 1) dimension levels (see issue #29).
+func (l *modelicaListener) markWrapVectors(node *parser.VectorContext, isOutermost bool) int {
+	maxChildDepth := 0
+	for _, childVector := range directElementVectors(node) {
+		childDepth := l.markWrapVectors(childVector, false)
+		if childDepth > maxChildDepth {
+			maxChildDepth = childDepth
+		}
+	}
+
+	depth := maxChildDepth + 1
+	if depth >= 3 || (depth == 2 && isOutermost) {
+		l.wrapVectors[node] = true
+	}
+	return depth
 }
 
 func (l *modelicaListener) EnterNamed_argument(node *parser.Named_argumentContext) {
@@ -570,14 +692,47 @@ func (l *parseErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingS
 	l.errors = append(l.errors, fmt.Sprintf("line %d:%d %s", line, column, msg))
 }
 
-// processFile formats a file
-func processFile(filename string, out io.Writer, config Config) error {
+// ProcessFile formats a file. Plain Modelica files (.mo) are formatted directly;
+// template files (.mot/.mopt) are routed through the template pipeline which makes the
+// file temporarily parseable, formats it, and then restores the template
+// constructs (see template.go). dialect selects the template dialect used for
+// template files (see DialectJinja); it is ignored for plain .mo files.
+func ProcessFile(filename string, out io.Writer, config Config, dialect string) error {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
 
 	text := string(content)
+	if isTemplateFile(filename) {
+		return processTemplate(text, out, config, dialect, filename)
+	}
+	return formatModelica(text, out, config, filename)
+}
+
+// countingWriter wraps an io.Writer and counts how many non-whitespace bytes
+// pass through it. It lets formatModelica detect the case where a non-empty
+// input produced no meaningful output.
+type countingWriter struct {
+	w             io.Writer
+	nonWhitespace int
+}
+
+func (c *countingWriter) Write(p []byte) (int, error) {
+	for _, b := range p {
+		switch b {
+		case ' ', '\t', '\r', '\n', '\f', '\v':
+		default:
+			c.nonWhitespace++
+		}
+	}
+	return c.w.Write(p)
+}
+
+// formatModelica formats a string of Modelica source, writing the result to out.
+// filename is used only for error reporting.
+func formatModelica(text string, out io.Writer, config Config, filename string) error {
+	counter := &countingWriter{w: out}
 	inputStream := antlr.NewInputStream(text)
 	lexer := parser.NewModelicaLexer(inputStream)
 
@@ -598,8 +753,7 @@ func processFile(filename string, out io.Writer, config Config) error {
 	p.AddErrorListener(errorListener)
 	sd := p.Stored_definition()
 
-	listener := newListener(out, tokenSource.commentTokens, config)
-	defer listener.close()
+	listener := newListener(counter, tokenSource.commentTokens, config)
 
 	antlr.ParseTreeWalkerDefault.Walk(listener, sd)
 	// add any remaining comments and handle newline at end of file
@@ -609,6 +763,9 @@ func processFile(filename string, out io.Writer, config Config) error {
 	if !listener.onNewLine {
 		listener.writeNewline()
 	}
+	// flush the listener's buffered writer so the counter reflects everything
+	// that was produced before we inspect it below
+	listener.close()
 
 	// if any errors were encountered while parsing, report them so that the
 	// caller can avoid overwriting the original file with malformed output
@@ -617,10 +774,19 @@ func processFile(filename string, out io.Writer, config Config) error {
 	}
 
 	// if any embedded HTML annotation strings were malformed (only possible when
-	// --format-html is enabled), report them clearly and leave the file unchanged
+	// formatHTML is enabled), report them clearly and leave the file unchanged
 	// rather than silently emitting unformatted HTML
 	if len(listener.htmlErrors) > 0 {
 		return fmt.Errorf("%s: malformed HTML in annotation string: %s", filename, strings.Join(listener.htmlErrors, "; "))
+	}
+
+	// guard against silently emptying a file: if the input had meaningful
+	// content but the formatter produced no non-whitespace output, the parser
+	// almost certainly matched an empty stored_definition without raising an
+	// error (e.g. the file is not actually Modelica). Refuse rather than
+	// overwrite the original with an empty file.
+	if strings.TrimSpace(text) != "" && counter.nonWhitespace == 0 {
+		return fmt.Errorf("%s: refusing to write empty output for non-empty input (file does not appear to be valid Modelica)", filename)
 	}
 
 	return nil
