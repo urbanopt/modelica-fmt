@@ -5,11 +5,30 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 ## Running
 
 ```bash
-modelica-fmt [-w] [-help] <sources>...
-Options:
-  -w  overwrite source with formatted output. If flag is not present print to stdout
-Arguments:
-  sources  one or more files or directories to format
+modelica-fmt [options] <sources>...
+```
+
+### Options
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `-w` | `false` | Overwrite the source file(s) with the formatted output. If omitted, the formatted result is printed to stdout. |
+| `-v` | `false` | Display the tool version and exit. |
+| `-line-length <n>` | `-1` | Maximum number of characters allowed per line before wrapping; `-1` means no limit. |
+| `-extra-padding` | `false` | **BETA:** add empty lines for padding to improve visual separation. |
+| `-format-html` | `false` | **BETA:** pretty-print HTML content embedded in annotation strings (e.g. `Documentation(info=...)` / `revisions=...`). See [Formatting HTML in annotations](#formatting-html-in-annotations-beta). |
+| `-help` | | Print usage information and exit. |
+
+### Arguments
+
+| Argument | Description |
+| --- | --- |
+| `sources` | One or more `.mo` files or directories to format. Directories are searched for `.mo` files. |
+
+For example, to overwrite a file in place while wrapping lines at 80 characters:
+
+```bash
+modelica-fmt -w -line-length 80 examples/gmt-building.mo
 ```
 
 To run the examples:
