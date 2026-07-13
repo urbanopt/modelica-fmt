@@ -46,8 +46,8 @@ func TestFormattingExamples(t *testing.T) {
 	for _, testCase := range exampleFileTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
 			// Setup
-			testSourceFile := path.Join("examples", testCase.sourceFile)
-			expectedOutFile := path.Join("examples", testCase.outFile)
+			testSourceFile := path.Join("testdata", testCase.sourceFile)
+			expectedOutFile := path.Join("testdata", testCase.outFile)
 			actualOutFile := path.Join(outputDir, testCase.outFile)
 			file, err := os.Create(actualOutFile)
 			a.NoError(err)

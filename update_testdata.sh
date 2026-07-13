@@ -3,21 +3,21 @@ set -e
 
 go build .
 
-for file in ./examples/*.mo; do
+for file in ./testdata/*.mo; do
     if [[ $file == *-out.mo ]]; then
         continue
     fi
     filename=$(basename -- $file)
     outfile="${filename%.*}-out.mo"
-    ./modelica-fmt $file > ./examples/${outfile}
+    ./modelica-fmt $file > ./testdata/${outfile}
 done
 
-# Templated Modelica (.mot) examples. Some templates cannot be formatted even
+# Templated Modelica (.mot) test data. Some templates cannot be formatted even
 # with preprocessing (see SKIP_FILES in geojson-modelica-translator); they are
 # kept as fixtures to exercise graceful failure and have no *-out.mot output.
 skip_mot=(gmt-district-energy-system.mot gmt-hptrio-variable-dist.mot gmt-run-spawn-building.mot)
 
-for file in ./examples/*.mot; do
+for file in ./testdata/*.mot; do
     if [[ $file == *-out.mot ]]; then
         continue
     fi
@@ -33,5 +33,5 @@ for file in ./examples/*.mot; do
         continue
     fi
     outfile="${filename%.*}-out.mot"
-    ./modelica-fmt $file > ./examples/${outfile}
+    ./modelica-fmt $file > ./testdata/${outfile}
 done

@@ -35,8 +35,8 @@ func TestFormattingTemplateExamples(t *testing.T) {
 	a := require.New(t)
 	for _, testCase := range templateFileTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
-			testSourceFile := path.Join("examples", testCase.sourceFile)
-			expectedOutFile := path.Join("examples", testCase.outFile)
+			testSourceFile := path.Join("testdata", testCase.sourceFile)
+			expectedOutFile := path.Join("testdata", testCase.outFile)
 			actualOutFile := path.Join(outputDir, testCase.outFile)
 			file, err := os.Create(actualOutFile)
 			a.NoError(err)
@@ -58,7 +58,7 @@ func TestTemplateFormattingIsIdempotent(t *testing.T) {
 	a := require.New(t)
 	for _, testCase := range templateFileTests {
 		t.Run(testCase.outFile, func(t *testing.T) {
-			formattedFile := path.Join("examples", testCase.outFile)
+			formattedFile := path.Join("testdata", testCase.outFile)
 			var out bytes.Buffer
 			err := processFile(formattedFile, &out, testCase.formatterConfig)
 			a.NoError(err)
@@ -76,11 +76,11 @@ func TestTemplatePreservesNonWhitespaceContent(t *testing.T) {
 	a := require.New(t)
 	for _, testCase := range templateFileTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
-			source, err := os.ReadFile(path.Join("examples", testCase.sourceFile))
+			source, err := os.ReadFile(path.Join("testdata", testCase.sourceFile))
 			a.NoError(err)
 
 			var out bytes.Buffer
-			err = processFile(path.Join("examples", testCase.sourceFile), &out, testCase.formatterConfig)
+			err = processFile(path.Join("testdata", testCase.sourceFile), &out, testCase.formatterConfig)
 			a.NoError(err)
 
 			a.Equal(stripWhitespace(string(source)), stripWhitespace(out.String()),
@@ -124,7 +124,7 @@ func TestTemplateUnformattableReturnsError(t *testing.T) {
 	for _, testCase := range unformattableTemplateTests {
 		t.Run(testCase.sourceFile, func(t *testing.T) {
 			var out bytes.Buffer
-			err := processFile(path.Join("examples", testCase.sourceFile), &out, Config{-1, false})
+			err := processFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false})
 			a.Error(err, "known-unformattable .mot should return an error: %s", testCase.reason)
 			a.Empty(out.String(), "no output should be produced when formatting fails")
 		})
@@ -137,7 +137,7 @@ func TestTemplateUnformattableReturnsError(t *testing.T) {
 func TestNonModelicaTemplateIsNotEmptied(t *testing.T) {
 	a := require.New(t)
 	var out bytes.Buffer
-	err := processFile(path.Join("examples", "gmt-run-spawn-building.mot"), &out, Config{-1, false})
+	err := processFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false})
 	a.Error(err)
 	a.Contains(err.Error(), "refusing to write empty output")
 }

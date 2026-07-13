@@ -13,11 +13,11 @@ Arguments:
   sources  one or more files or directories to format
 ```
 
-To run the examples:
+To try the formatter against the bundled test data:
 
 ```bash
-./modelica-fmt examples/gmt-building.mo > examples/gmt-building-out.mo
-./modelica-fmt examples/gmt-coolingtower.mo > examples/gmt-coolingtower-out.mo
+./modelica-fmt testdata/gmt-building.mo > testdata/gmt-building-out.mo
+./modelica-fmt testdata/gmt-coolingtower.mo > testdata/gmt-coolingtower-out.mo
 ```
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
