@@ -25,6 +25,10 @@ var templateFileTests = []struct {
 	{"gmt-design-data-series.mot", "gmt-design-data-series-out.mot", Config{-1, false}},
 	// {% raw %} ... {% endraw %} blocks interleaved with expressions
 	{"gmt-cooling-indirect.mot", "gmt-cooling-indirect-out.mot", Config{-1, false}},
+	// {% for %} loops + a filter expression + many {% raw %} blocks (SpawnBuilding)
+	{"gmt-spawn-building.mot", "gmt-spawn-building-out.mot", Config{-1, false}},
+	// {% if %} control plus a dozen {% raw %} blocks in a large file (TimeSeriesBuilding)
+	{"gmt-time-series-building.mot", "gmt-time-series-building-out.mot", Config{-1, false}},
 }
 
 func TestFormattingTemplateExamples(t *testing.T) {
@@ -95,14 +99,47 @@ func TestTemplateUnsupportedDialectReturnsError(t *testing.T) {
 	a.Contains(err.Error(), "mako")
 }
 
-// TestTemplateUnformattableReturnsError ensures a template that cannot be made
-// parseable via preprocessing (matching GMT's SKIP_FILES) returns an error rather
-// than emitting garbled output, so the caller leaves the file unchanged.
+// unformattableTemplateTests are real GMT .mot files that cannot be safely
+// formatted. Each must return an error so the caller leaves the file unchanged
+// rather than emitting garbled or empty output.
+var unformattableTemplateTests = []struct {
+	sourceFile string
+	reason     string
+}{
+	// matches GMT's SKIP_FILES; preprocessing cannot make it parseable
+	{"gmt-district-energy-system.mot", "DistrictEnergySystem template (GMT SKIP_FILES)"},
+	// {% for %} control tags wrapping braces exceed the substitution heuristic,
+	// producing invalid Modelica that fails to parse
+	{"gmt-hptrio-variable-dist.mot", "for-loop control around braces yields a syntax error"},
+	// a Dymola run-script, not Modelica: the parser matches an empty definition
+	// with no error, so the empty-output guard must reject it
+	{"gmt-run-spawn-building.mot", "non-Modelica Dymola script must not be silently emptied"},
+}
+
+// TestTemplateUnformattableReturnsError ensures templates that cannot be made
+// parseable via preprocessing return an error rather than emitting garbled or
+// empty output, so the caller leaves the file unchanged.
 func TestTemplateUnformattableReturnsError(t *testing.T) {
 	a := require.New(t)
+	for _, testCase := range unformattableTemplateTests {
+		t.Run(testCase.sourceFile, func(t *testing.T) {
+			var out bytes.Buffer
+			err := processFile(path.Join("examples", testCase.sourceFile), &out, Config{-1, false})
+			a.Error(err, "known-unformattable .mot should return an error: %s", testCase.reason)
+			a.Empty(out.String(), "no output should be produced when formatting fails")
+		})
+	}
+}
+
+// TestNonModelicaTemplateIsNotEmptied specifically guards against silent data
+// loss: a non-empty .mot file that is not actually Modelica must be rejected via
+// the empty-output guard instead of being overwritten with an empty file.
+func TestNonModelicaTemplateIsNotEmptied(t *testing.T) {
+	a := require.New(t)
 	var out bytes.Buffer
-	err := processFile(path.Join("examples", "gmt-district-energy-system.mot"), &out, Config{-1, false})
-	a.Error(err, "known-unformattable .mot should return an error")
+	err := processFile(path.Join("examples", "gmt-run-spawn-building.mot"), &out, Config{-1, false})
+	a.Error(err)
+	a.Contains(err.Error(), "refusing to write empty output")
 }
 
 func TestSubstituteReverseRoundTrip(t *testing.T) {

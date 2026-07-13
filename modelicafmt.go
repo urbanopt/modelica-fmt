@@ -549,9 +549,29 @@ func processFile(filename string, out io.Writer, config Config) error {
 	return formatModelica(text, out, config, filename)
 }
 
+// countingWriter wraps an io.Writer and counts how many non-whitespace bytes
+// pass through it. It lets formatModelica detect the case where a non-empty
+// input produced no meaningful output.
+type countingWriter struct {
+	w             io.Writer
+	nonWhitespace int
+}
+
+func (c *countingWriter) Write(p []byte) (int, error) {
+	for _, b := range p {
+		switch b {
+		case ' ', '\t', '\r', '\n', '\f', '\v':
+		default:
+			c.nonWhitespace++
+		}
+	}
+	return c.w.Write(p)
+}
+
 // formatModelica formats a string of Modelica source, writing the result to out.
 // filename is used only for error reporting.
 func formatModelica(text string, out io.Writer, config Config, filename string) error {
+	counter := &countingWriter{w: out}
 	inputStream := antlr.NewInputStream(text)
 	lexer := parser.NewModelicaLexer(inputStream)
 
@@ -572,8 +592,7 @@ func formatModelica(text string, out io.Writer, config Config, filename string) 
 	p.AddErrorListener(errorListener)
 	sd := p.Stored_definition()
 
-	listener := newListener(out, tokenSource.commentTokens, config)
-	defer listener.close()
+	listener := newListener(counter, tokenSource.commentTokens, config)
 
 	antlr.ParseTreeWalkerDefault.Walk(listener, sd)
 	// add any remaining comments and handle newline at end of file
@@ -583,11 +602,23 @@ func formatModelica(text string, out io.Writer, config Config, filename string) 
 	if !listener.onNewLine {
 		listener.writeNewline()
 	}
+	// flush the listener's buffered writer so the counter reflects everything
+	// that was produced before we inspect it below
+	listener.close()
 
 	// if any errors were encountered while parsing, report them so that the
 	// caller can avoid overwriting the original file with malformed output
 	if len(errorListener.errors) > 0 {
 		return fmt.Errorf("%s: %s", filename, strings.Join(errorListener.errors, "; "))
+	}
+
+	// guard against silently emptying a file: if the input had meaningful
+	// content but the formatter produced no non-whitespace output, the parser
+	// almost certainly matched an empty stored_definition without raising an
+	// error (e.g. the file is not actually Modelica). Refuse rather than
+	// overwrite the original with an empty file.
+	if strings.TrimSpace(text) != "" && counter.nonWhitespace == 0 {
+		return fmt.Errorf("%s: refusing to write empty output for non-empty input (file does not appear to be valid Modelica)", filename)
 	}
 
 	return nil

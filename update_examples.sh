@@ -15,7 +15,7 @@ done
 # Templated Modelica (.mot) examples. Some templates cannot be formatted even
 # with preprocessing (see SKIP_FILES in geojson-modelica-translator); they are
 # kept as fixtures to exercise graceful failure and have no *-out.mot output.
-skip_mot=(gmt-district-energy-system.mot)
+skip_mot=(gmt-district-energy-system.mot gmt-hptrio-variable-dist.mot gmt-run-spawn-building.mot)
 
 for file in ./examples/*.mot; do
     if [[ $file == *-out.mot ]]; then
