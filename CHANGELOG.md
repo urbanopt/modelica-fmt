@@ -1,5 +1,16 @@
 # Unreleased
 
+* Tweak default formatting for readability (issue #26):
+  * Keep a function call with a single argument on one line instead of breaking
+    the argument onto its own line, e.g. `pre(x)`, `der(y)`, `sin(z)`,
+    `sum(a .* b)`. Calls with two or more arguments are unchanged.
+  * Insert a blank line before `equation`/`initial equation`,
+    `algorithm`/`initial algorithm`, and `public`/`protected` section headers to
+    separate them from the preceding declarations. The blank line is not
+    duplicated when `-extra-padding` already adds one.
+  * Collapse the stray empty line often left between the final `</ul>` and
+    `</html>` of a `revisions` docstring (`</ul>\n\n</html>` becomes
+    `</ul>\n</html>`).
 * Add native support for formatting templated Modelica (`.mot`/`.mopt`) files that embed Jinja
   constructs (`{{ ... }}`, `{% ... %}`, `{% raw %}`), ported from geojson-modelica-translator's
   `format_modelica_files.py`. `.mot` and `.mopt` files are detected automatically (including in directory

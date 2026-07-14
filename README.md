@@ -33,8 +33,24 @@ For example, to overwrite a file in place while wrapping lines at 80 characters:
 modelica-fmt -w -line-length 80 internal/format/testdata/gmt-building.mo
 ```
 
-### Array formatting (`-wrap-arrays`)
+### Default formatting behavior
 
+The formatter always applies the following readability rules (no flag required):
+
+- **Single-argument calls stay on one line.** A function call with exactly one
+  argument keeps its argument inline instead of breaking it onto its own line,
+  so common wrappers such as `pre(x)`, `der(y)`, `sin(z)` and `sum(a .* b)`
+  remain compact. Calls with two or more arguments are broken as before.
+- **Blank line before section headers.** A single blank line is inserted before
+  `equation`/`initial equation`, `algorithm`/`initial algorithm`, and
+  `public`/`protected` section headers to separate them from the preceding
+  declarations. When `-extra-padding` already adds a blank line there, it is not
+  duplicated.
+- **Tidy revision docstrings.** The stray empty line often left between the final
+  `</ul>` and `</html>` of a `revisions` docstring is removed
+  (`</ul>\n\n</html>` becomes `</ul>\n</html>`).
+
+### Array formatting (`-wrap-arrays`)
 By default arrays (`{...}`) are kept on a single line. With `-wrap-arrays`,
 multidimensional arrays outside of annotations are broken across lines in a
 compact style: the innermost two dimensions are kept inline while the outer

@@ -84,8 +84,7 @@ model building
 
   Buildings.Applications.DHC.Loads.BaseClasses.FlowDistribution disFloHea(
     redeclare package Medium=MediumW,
-    m_flow_nominal=sum(
-      terUni.mHeaWat_flow_nominal .* terUni.facSca),
+    m_flow_nominal=sum(terUni.mHeaWat_flow_nominal .* terUni.facSca),
     dp_nominal(
       displayUnit="Pa")=100000,
     have_pum=have_pum,
@@ -96,8 +95,7 @@ model building
 
   Buildings.Applications.DHC.Loads.BaseClasses.FlowDistribution disFloCoo(
     redeclare package Medium=MediumW,
-    m_flow_nominal=sum(
-      terUni.mChiWat_flow_nominal .* terUni.facSca),
+    m_flow_nominal=sum(terUni.mChiWat_flow_nominal .* terUni.facSca),
     typDis=Buildings.Applications.DHC.Loads.Types.DistributionType.ChilledWater,
     dp_nominal(
       displayUnit="Pa")=100000,
