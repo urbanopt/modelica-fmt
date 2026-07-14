@@ -343,7 +343,7 @@ func TestDollarExpressionRoundTrip(t *testing.T) {
 }
 
 // TestReverseSubHandlesWidePlaceholders ensures placeholders wider than the
-// %03d minimum (i.e. 1000+ substitutions) are restored correctly rather than
+// %03d minimum (i.e., 1000+ substitutions) are restored correctly rather than
 // leaving a stray trailing digit.
 func TestReverseSubHandlesWidePlaceholders(t *testing.T) {
 	a := require.New(t)

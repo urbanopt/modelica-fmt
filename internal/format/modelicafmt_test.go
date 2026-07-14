@@ -77,7 +77,7 @@ func TestFormattingExamples(t *testing.T) {
 }
 
 // TestProcessFileReturnsErrorOnInvalidInput ensures that processFile returns an
-// error when the input cannot be parsed cleanly (e.g. it contains an
+// error when the input cannot be parsed cleanly (e.g., it contains an
 // unrecognized token). This allows callers to avoid overwriting the original
 // file with malformed output (see issue #34).
 func TestProcessFileReturnsErrorOnInvalidInput(t *testing.T) {

@@ -18,7 +18,7 @@ modelica-fmt [options] <sources>...
 | `-extra-padding` | `false` | **BETA:** add empty lines for padding to improve visual separation. |
 | `-wrap-arrays` | `false` | Wrap multidimensional arrays (`{...}`) across multiple lines outside of annotations. See [Array formatting](#array-formatting--wrap-arrays). |
 | `-template <dialect>` | `jinja` | Template dialect used for `.mot`/`.mopt` files (currently only `jinja`). See [Templated Modelica files](#templated-modelica-motmopt-files). |
-| `-format-html` | `false` | **BETA:** pretty-print HTML content embedded in annotation strings (e.g. `Documentation(info=...)` / `revisions=...`). See [Formatting HTML in annotations](#formatting-html-in-annotations-beta). |
+| `-format-html` | `false` | Pretty-print HTML content embedded in annotation strings (e.g., `Documentation(info=...)` / `revisions=...`). See [Formatting HTML in annotations](#formatting-html-in-annotations). |
 | `-help` | | Print usage information and exit. |
 
 ### Arguments
@@ -68,7 +68,7 @@ To try the formatter against the bundled test data:
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
 
-## Formatting HTML in annotations (BETA)
+## Formatting HTML in annotations
 
 Modelica annotations commonly embed HTML documentation, e.g.
 `Documentation(info="<html>...</html>")` and `revisions="..."`. By default the entire
@@ -83,13 +83,13 @@ This feature is **opt-in** and intentionally conservative:
 
 - A string is treated as HTML only when its content begins with `<html>` (the Modelica
   convention), so key names like `info`/`revisions` are not hard-coded.
-- Only whitespace/indentation changes — tags, attributes, entities (e.g. `&amp;`) and text
+- Only whitespace/indentation changes — tags, attributes, entities (e.g., `&amp;`) and text
   are preserved exactly, and the `\"` escaping inside Modelica strings is round-tripped
   losslessly. The result is idempotent.
-- Block-level elements (e.g. `<ul>`, `<li>`, `<div>`), comments and doctypes are placed
+- Block-level elements (e.g., `<ul>`, `<li>`, `<div>`), comments and doctypes are placed
   on their own lines indented to their nesting depth. Paragraphs with inline-only content
   and plain `<h4>` headings keep their opening tag, inline content, and closing tag on one
-  line; attributed `<h4>` headings keep block layout. Inline/phrasing elements (e.g. `<b>`,
+  line; attributed `<h4>` headings keep block layout. Inline/phrasing elements (e.g., `<b>`,
   `<i>`, `<a>`, `<code>`, `<span>`, `<br/>`) and the text around them stay together on one
   line, so short markup such as `<p><b>Example</b></p>` or `<a href=\"...\">link</a>` is
   kept condensed instead of exploded one tag per line.
@@ -125,7 +125,7 @@ These are intentional v1 trade-offs, documented here so they are easy to revisit
 - **Inline runs collapse to a single line.** A run of text and inline elements is placed on
   one line (its internal whitespace runs collapsed to single spaces), so a long paragraph
   becomes one long line; it is not wrapped to `--line-length`.
-- **Conservative handling of unbalanced HTML.** HTML with omitted closing tags (e.g. a bare
+- **Conservative handling of unbalanced HTML.** HTML with omitted closing tags (e.g., a bare
   `<li>` or `<p>`) or mismatched tags is not reflowed; it is reported as an error and the
   file is left unchanged rather than reflowed, to avoid corrupting content.
 
@@ -209,5 +209,3 @@ If the grammar file (Modelica.g4) has been edited, you'll need to regenerate the
 ```
 
 ## Known Issues
-
-

@@ -45,7 +45,7 @@ var compactBlockElements = map[string]bool{
 }
 
 // compactBlockElementsWithoutAttributes are compacted only when the opening tag
-// has no attributes, e.g. <h4>Reference</h4> but not <h4 class="...">.
+// has no attributes, e.g., <h4>Reference</h4> but not <h4 class="...">.
 var compactBlockElementsWithoutAttributes = map[string]bool{
 	"h4": true,
 }
@@ -147,7 +147,7 @@ func htmlTagName(raw string) string {
 }
 
 // isSelfClosingTag returns true for a start tag written with a trailing slash
-// (e.g. "<br/>").
+// (e.g., "<br/>").
 func isSelfClosingTag(raw string) bool {
 	t := strings.TrimRight(raw, " \t\r\n\f\v")
 	return strings.HasSuffix(t, "/>")
@@ -209,7 +209,7 @@ func collapseInlineWhitespace(s string) string {
 //
 // It returns a non-nil error (and the caller should leave the original untouched)
 // when the HTML is malformed or unbalanced, so a bad docstring is never corrupted.
-// The error explains what was wrong (e.g. an unexpected closing tag or an unclosed
+// The error explains what was wrong (e.g., an unexpected closing tag or an unclosed
 // element) so the failure can be reported clearly.
 func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 	z := html.NewTokenizer(strings.NewReader(decoded))
