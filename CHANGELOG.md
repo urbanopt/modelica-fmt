@@ -53,14 +53,19 @@ released version corresponds to a tagged
   formatter now returns an error and leaves the file unchanged instead of emptying it.
 * Add `-wrap-arrays` option to format multidimensional arrays (`{...}`) across
   multiple lines outside of annotations (issue #29).
+* Add `-extra-padding` (BETA): inserts a blank line after (almost) every
+  semicolon for legibility, skipping lines with a `within` clause or inside a
+  matrix (`[...]`) literal, and avoiding duplicate blank lines/trailing
+  newlines at the end of a file.
 
 ## [v0.2-pr.2] - 2021-02-19
 
 * Add a `-line-length` CLI flag and break lines longer than 80 characters.
+* Don't allow a line break immediately at a curly brace.
 
 ## [v0.2-pr.1] - 2021-01-28
 
-* Add a `-v`/`-version` flag to display version info.
+* Add a `-v` flag to display version info.
 * Indent arguments of external function calls.
 * Show CLI usage when no arguments are provided.
 * Move CI from Travis to GitHub Actions.
@@ -83,8 +88,8 @@ released version corresponds to a tagged
 
 ## [v0.1-pr.1] - 2020-06-22
 
-* Initial formatter implementation for Modelica (`.mo`) files: annotation,
-  if-expression, and array-constructor formatting rules.
+* Initial formatter implementation for Modelica (`.mo`) files: annotation and
+  if-expression formatting/indentation rules.
 * Add an option to write the formatted result back to the source file.
 * Add rudimentary comment handling.
 * Rename the project/binary to `modelica-fmt`/`modelicafmt`.
