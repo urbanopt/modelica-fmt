@@ -83,6 +83,7 @@ model Merkel
     deltax=yMin/20)
     "Electric power consumed by fan"
     annotation (Placement(transformation(extent={{100,70},{120,90}}),iconTransformation(extent={{100,70},{120,90}})));
+
 protected
   final parameter Real fanRelPowDer[size(
     fanRelPow.r_V,
@@ -95,11 +96,10 @@ protected
     "Coefficients for fan relative power consumption as a function
     of control signal";
   Modelica.Blocks.Sources.RealExpression TWatIn(
-    final y=Medium.temperature(
-      Medium.setState_phX(
-        p=port_a.p,
-        h=inStream(port_a.h_outflow),
-        X=inStream(port_a.Xi_outflow))))
+    final y=Medium.temperature(Medium.setState_phX(
+      p=port_a.p,
+      h=inStream(port_a.h_outflow),
+      X=inStream(port_a.Xi_outflow))))
     "Water inlet temperature"
     annotation (Placement(transformation(extent={{-70,36},{-50,54}})));
   Modelica.Blocks.Sources.RealExpression mWat_flow(
@@ -118,6 +118,7 @@ protected
     final yMin=yMin)
     "Model for thermal performance"
     annotation (Placement(transformation(extent={{-20,40},{0,60}})));
+
 initial equation
   // Check validity of relative fan power consumption at y=yMin and y=1
   assert(
@@ -125,22 +126,20 @@ initial equation
       per=fanRelPow,
       r_V=yMin,
       d=fanRelPowDer) >-1E-4,
-    "The fan relative power consumption must be non-negative for y=0."+"\n   Obtained fanRelPow(0) = "+String(
-      cha.normalizedPower(
-        per=fanRelPow,
-        r_V=yMin,
-        d=fanRelPowDer))+"\n   You need to choose different values for the parameter fanRelPow.");
+    "The fan relative power consumption must be non-negative for y=0."+"\n   Obtained fanRelPow(0) = "+String(cha.normalizedPower(
+      per=fanRelPow,
+      r_V=yMin,
+      d=fanRelPowDer))+"\n   You need to choose different values for the parameter fanRelPow.");
   assert(
-    abs(
-      1-cha.normalizedPower(
-        per=fanRelPow,
-        r_V=1,
-        d=fanRelPowDer)) < 1E-4,
-    "The fan relative power consumption must be one for y=1."+"\n   Obtained fanRelPow(1) = "+String(
-      cha.normalizedPower(
-        per=fanRelPow,
-        r_V=1,
-        d=fanRelPowDer))+"\n   You need to choose different values for the parameter fanRelPow."+"\n   To increase the fan power, change fraPFan_nominal or PFan_nominal.");
+    abs(1-cha.normalizedPower(
+      per=fanRelPow,
+      r_V=1,
+      d=fanRelPowDer)) < 1E-4,
+    "The fan relative power consumption must be one for y=1."+"\n   Obtained fanRelPow(1) = "+String(cha.normalizedPower(
+      per=fanRelPow,
+      r_V=1,
+      d=fanRelPowDer))+"\n   You need to choose different values for the parameter fanRelPow."+"\n   To increase the fan power, change fraPFan_nominal or PFan_nominal.");
+
 equation
   connect(per.y,y)
     annotation (Line(points={{-22,58},{-40,58},{-40,80},{-120,80}},color={0,0,127}));

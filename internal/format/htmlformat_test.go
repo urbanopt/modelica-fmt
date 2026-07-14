@@ -41,8 +41,31 @@ func TestIsHTMLContent(t *testing.T) {
 	a.False(isHTMLContent(""))
 }
 
+func TestCollapseRevisionListBlankLine(t *testing.T) {
+	a := require.New(t)
+
+	// a single blank line between </ul> and </html> is removed
+	a.Equal("</ul>\n</html>", collapseRevisionListBlankLine("</ul>\n\n</html>"))
+
+	// multiple blank lines (including whitespace-only lines) collapse to one newline
+	a.Equal("</ul>\n</html>", collapseRevisionListBlankLine("</ul>\n\n  \n\n</html>"))
+
+	// indentation before </html> is preserved
+	a.Equal("</ul>\n  </html>", collapseRevisionListBlankLine("</ul>\n\n  </html>"))
+
+	// tag names are matched case-insensitively
+	a.Equal("</UL>\n</HTML>", collapseRevisionListBlankLine("</UL>\n\n</HTML>"))
+
+	// already-correct content is left untouched
+	a.Equal("</ul>\n</html>", collapseRevisionListBlankLine("</ul>\n</html>"))
+
+	// unrelated content is left untouched
+	a.Equal("<p>text</p>\n\n<p>more</p>", collapseRevisionListBlankLine("<p>text</p>\n\n<p>more</p>"))
+}
+
 func TestFormatHTMLDocStringBasic(t *testing.T) {
 	a := require.New(t)
+
 	out, err := formatHTMLDocString("<html><p>hi</p></html>", 0)
 	a.NoError(err)
 	a.Equal("<html>\n  <p>hi</p>\n</html>", out)

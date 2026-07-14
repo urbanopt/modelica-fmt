@@ -6,10 +6,26 @@ package format
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
 )
+
+// revisionListBlankLineRe matches the stray blank line(s) that are commonly left
+// between the closing `</ul>` of a revisions list and the closing `</html>` of a
+// Modelica annotation docstring. The trailing indentation before `</html>` is
+// captured so it can be preserved. HTML tag names are matched case-insensitively.
+var revisionListBlankLineRe = regexp.MustCompile(`(?i)(</ul>)[ \t]*\r?\n(?:[ \t]*\r?\n)+([ \t]*)(</html>)`)
+
+// collapseRevisionListBlankLine removes the extra empty line(s) frequently left
+// between the final `</ul>` and `</html>` of a revisions docstring, turning
+// `</ul>\n\n</html>` into `</ul>\n</html>` (see issue #26). Content other than
+// that blank-line run is left untouched (including the original tag casing and
+// the indentation preceding `</html>`).
+func collapseRevisionListBlankLine(s string) string {
+	return revisionListBlankLineRe.ReplaceAllString(s, "${1}\n${2}${3}")
+}
 
 // voidElements are HTML elements that never have content or an end tag.
 var voidElements = map[string]bool{

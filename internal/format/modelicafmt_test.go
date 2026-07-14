@@ -34,6 +34,7 @@ var exampleFileTests = []struct {
 }{
 	{"gmt-coolingtower.mo", "gmt-coolingtower-out.mo", Config{-1, false, false, false}},
 	{"functions.mo", "functions-out.mo", Config{-1, false, false, false}},
+	{"tweaks.mo", "tweaks-out.mo", Config{-1, false, false, false}},
 	{"example-no-within.mo", "example-no-within-out.mo", Config{-1, false, false, false}},
 	{"example-arrays.mo", "example-arrays-out.mo", Config{-1, false, false, false}},
 	{"example-arrays.mo", "example-arrays-wrapped-out.mo", Config{-1, false, true, false}},

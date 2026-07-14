@@ -56,9 +56,12 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 		parser.IExpression_listContext,
 		parser.IConstraining_clauseContext,
 		parser.IIf_expressionContext,
-		parser.IIf_expression_bodyContext,
-		parser.IExternal_function_call_argumentContext:
+		parser.IIf_expression_bodyContext:
 		return true
+	case parser.IExternal_function_call_argumentContext:
+		// keep a lone external function call argument on the same line as the
+		// call, e.g. `EnergyPlusInputVariableFree(input2)` (issue #26)
+		return !isSoleExternalFunctionCallArgument(rule)
 	case parser.IString_commentContext:
 		return 0 == l.inAnnotation
 	case
@@ -91,10 +94,59 @@ func (l *modelicaListener) insertIndentBefore(rule antlr.ParserRuleContext) bool
 		}
 		return false
 	case parser.IFunction_argumentContext:
-		return 0 == l.inNamedArgument && 0 == l.inVector && (0 == l.inAnnotation || 0 < l.inModelAnnotation)
+		if 0 != l.inNamedArgument || 0 != l.inVector || (0 != l.inAnnotation && 0 == l.inModelAnnotation) {
+			return false
+		}
+		// keep a lone function argument on the same line as the call, e.g.
+		// `pre(x)`, `der(y)`, `sin(z)` (issue #26)
+		return !isSoleFunctionArgument(rule)
 	default:
 		return false
 	}
+}
+
+// isSoleFunctionArgument reports whether the given function_argument is the only
+// argument of its function call, i.e. the call looks like `f(x)`. Such calls are
+// kept on a single line rather than breaking the argument onto its own line (see
+// issue #26). Only positional arguments directly under a function_call_args are
+// considered; arguments in a comma-separated list or an array constructor (`for`)
+// are not sole arguments.
+//
+// The grammar is left-recursive:
+//
+//	function_call_args : '(' (function_arguments)? ')' ;
+//	function_arguments : function_argument (',' function_arguments | 'for' for_indices)? | named_arguments ;
+//
+// so a single positional argument produces a function_arguments node with a lone
+// function_argument child whose parent's parent is the function_call_args.
+func isSoleFunctionArgument(rule antlr.ParserRuleContext) bool {
+	args, ok := rule.GetParent().(*parser.Function_argumentsContext)
+	if !ok {
+		return false
+	}
+	if _, ok := args.GetParent().(*parser.Function_call_argsContext); !ok {
+		return false
+	}
+	// a comma-separated list or a `for` constructor adds sibling children, so a
+	// sole argument is the only child of the top-level function_arguments node
+	return args.GetChildCount() == 1
+}
+
+// isSoleExternalFunctionCallArgument reports whether the given
+// external_function_call_argument is the only argument of its external function
+// call, e.g. `EnergyPlusInputVariableFree(input2)`. Such calls are kept on a
+// single line rather than breaking the argument onto its own line (see issue
+// #26).
+//
+//	external_function_call_args : external_function_call_argument (',' external_function_call_argument)* ;
+//
+// so a single argument is the only child of the external_function_call_args node.
+func isSoleExternalFunctionCallArgument(rule antlr.ParserRuleContext) bool {
+	args, ok := rule.GetParent().(*parser.External_function_call_argsContext)
+	if !ok {
+		return false
+	}
+	return args.GetChildCount() == 1
 }
 
 // insertSpaceBeforeToken returns true if a space should be inserted before the current token
@@ -194,6 +246,11 @@ type modelicaListener struct {
 	commentTokens                []antlr.Token // stores comments to insert while writing
 	maxLineLength                int           // configuration for num charaters per line
 	currentLineLength            int           // length of the line up to the writing position
+	// trailingNewlines counts the number of consecutive newline characters most
+	// recently written (reset whenever non-newline content is written). It lets
+	// ensureBlankLineBefore add a blank line before a section header without
+	// doubling an existing blank line (e.g. one added by -extra-padding).
+	trailingNewlines int
 
 	// modelAnnotationVectorStack is a stack which stores `vector` contexts,
 	// which is used for conditionally indenting vector children
@@ -350,6 +407,17 @@ func (l *modelicaListener) writeString(str string) {
 		charsOnLastLine = len(str) - (lastNewlineIndex + 1)
 	}
 	l.currentLineLength += charsOnLastLine
+	l.trailingNewlines = countTrailingNewlines(str)
+}
+
+// countTrailingNewlines returns the number of consecutive '\n' characters at the
+// end of s.
+func countTrailingNewlines(s string) int {
+	n := 0
+	for i := len(s) - 1; i >= 0 && s[i] == '\n'; i-- {
+		n++
+	}
+	return n
 }
 
 // writeHTMLString writes a pre-formatted, multi-line HTML string literal. Unlike
@@ -365,6 +433,7 @@ func (l *modelicaListener) writeHTMLString(formatted string) {
 	} else {
 		l.currentLineLength = len(formatted) - (lastNewlineIndex + 1)
 	}
+	l.trailingNewlines = countTrailingNewlines(formatted)
 }
 
 func (l *modelicaListener) writeNewline() {
@@ -372,9 +441,24 @@ func (l *modelicaListener) writeNewline() {
 	l.writer.WriteString("\n")
 	l.onNewLine = true
 	l.currentLineLength = 0
+	l.trailingNewlines++
 
 	// WARNING: this is coupled with maybeIndent, which uses this state
 	l.lineIndentIncreased = false
+}
+
+// ensureBlankLineBefore guarantees that the next content is preceded by exactly
+// one blank line, without adding a second blank line when one is already present
+// (e.g. one inserted by -extra-padding). It is used to visually separate section
+// headers (equation/algorithm/public/protected) from the preceding content (see
+// issue #26).
+func (l *modelicaListener) ensureBlankLineBefore() {
+	if !l.onNewLine {
+		l.writeNewline()
+	}
+	for l.trailingNewlines < 2 {
+		l.writeNewline()
+	}
 }
 
 func (l *modelicaListener) writeComment(comment antlr.Token) {
@@ -432,19 +516,33 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 		l.writeComment(commentToken)
 	}
 
-	if l.config.formatHTML && node.GetSymbol().GetTokenType() == parser.ModelicaLexerSTRING {
-		formatted, ok, err := maybeFormatHTMLString(node.GetText(), l.indentation()+1)
-		if err != nil {
-			// The string is an HTML docstring (starts with <html>) but could not
-			// be formatted because it is malformed/unbalanced. Record a clear
-			// error so processFile fails loudly rather than silently emitting the
-			// HTML unformatted, and leave the original token unchanged.
-			l.htmlErrors = append(l.htmlErrors, err.Error())
-		}
-		if ok {
-			l.writeHTMLString(formatted)
+	// insert a blank line before a `public`/`protected` section header so it is
+	// visually separated from the preceding content (issue #26). These keywords
+	// only appear as section markers in a class body.
+	if text := node.GetText(); text == "public" || text == "protected" {
+		l.ensureBlankLineBefore()
+	}
+
+	if node.GetSymbol().GetTokenType() == parser.ModelicaLexerSTRING {
+		if l.config.formatHTML {
+			formatted, ok, err := maybeFormatHTMLString(node.GetText(), l.indentation()+1)
+			if err != nil {
+				// The string is an HTML docstring (starts with <html>) but could not
+				// be formatted because it is malformed/unbalanced. Record a clear
+				// error so processFile fails loudly rather than silently emitting the
+				// HTML unformatted, and leave the original token unchanged.
+				l.htmlErrors = append(l.htmlErrors, err.Error())
+			}
+			if ok {
+				l.writeHTMLString(formatted)
+			} else {
+				l.writeString(node.GetText())
+			}
 		} else {
-			l.writeString(node.GetText())
+			// even without HTML pretty-printing, collapse the stray blank line
+			// often left between the last `</ul>` and `</html>` of a revisions
+			// docstring (issue #26)
+			l.writeString(collapseRevisionListBlankLine(node.GetText()))
 		}
 	} else {
 		l.writeString(node.GetText())
@@ -491,6 +589,17 @@ func (l *modelicaListener) ExitEveryRule(node antlr.ParserRuleContext) {
 	if l.insertIndentBefore(node) {
 		l.maybeDedent()
 	}
+}
+
+// EnterEquation_section and EnterAlgorithm_section insert a blank line before an
+// `equation`/`initial equation`/`algorithm`/`initial algorithm` section so it is
+// visually separated from the preceding declarations (issue #26).
+func (l *modelicaListener) EnterEquation_section(node *parser.Equation_sectionContext) {
+	l.ensureBlankLineBefore()
+}
+
+func (l *modelicaListener) EnterAlgorithm_section(node *parser.Algorithm_sectionContext) {
+	l.ensureBlankLineBefore()
 }
 
 func (l *modelicaListener) EnterAnnotation(node *parser.AnnotationContext) {

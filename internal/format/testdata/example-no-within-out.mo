@@ -16,7 +16,6 @@ class MyClass
     "Some comment"
     extends Modelica.Icons.Function;
     input Integer input2;
-  external "C" EnergyPlusInputVariableFree(
-    input2);
+  external "C" EnergyPlusInputVariableFree(input2);
   end destructor;
 end MyClass;

@@ -68,8 +68,7 @@ model building
     annotation (Placement(transformation(extent={{-200,-60},{-180,-40}})));
   Buildings.Applications.DHC.Loads.BaseClasses.FlowDistribution disFloHea(
     redeclare package Medium=MediumW,
-    m_flow_nominal=sum(
-      terUni.mHeaWat_flow_nominal .* terUni.facSca),
+    m_flow_nominal=sum(terUni.mHeaWat_flow_nominal .* terUni.facSca),
     dp_nominal(
       displayUnit="Pa")=100000,
     have_pum=have_pum,
@@ -79,8 +78,7 @@ model building
     annotation (Placement(transformation(extent={{-140,-100},{-120,-80}})));
   Buildings.Applications.DHC.Loads.BaseClasses.FlowDistribution disFloCoo(
     redeclare package Medium=MediumW,
-    m_flow_nominal=sum(
-      terUni.mChiWat_flow_nominal .* terUni.facSca),
+    m_flow_nominal=sum(terUni.mChiWat_flow_nominal .* terUni.facSca),
     typDis=Buildings.Applications.DHC.Loads.Types.DistributionType.ChilledWater,
     dp_nominal(
       displayUnit="Pa")=100000,
@@ -89,6 +87,7 @@ model building
     nPorts_b1=nZon)
     "Chilled water distribution system"
     annotation (Placement(transformation(extent={{-140,-160},{-120,-140}})));
+
 equation
   connect(disFloHea.port_b,secHeaRet[1])
     annotation (Line(points={{140,-70},{240,-70},{240,32},{300,32}},color={0,127,
