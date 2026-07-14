@@ -292,6 +292,28 @@ end LoopedArray;
 	a.Contains(formatted, "{% for building in data[\"building_load_files\"] %}")
 }
 
+// TestSingleElementArrayExpressionKeepsDisambiguatingSpace guards against the
+// formatter collapsing `{ {{ expr }} }` into `{{{ expr }}}`. The Modelica
+// array formatter normally strips the space inside a single-element array
+// literal, but doing so here would make the restored Jinja expression's own
+// `{{`/`}}` delimiters collide with the surrounding array braces, producing
+// an ambiguous triple-brace sequence when the template is later rendered.
+func TestSingleElementArrayExpressionKeepsDisambiguatingSpace(t *testing.T) {
+	a := require.New(t)
+	original := `model NominalArray
+  parameter Real a[3] = fill({ {{ data["nominal_values"]["boiler_efficiency"] }} });
+end NominalArray;
+`
+	var out bytes.Buffer
+	err := processTemplate(original, &out, Config{-1, false, false, false}, DialectJinja, "nominal-array.mot")
+	a.NoError(err)
+
+	formatted := out.String()
+	a.NotContains(formatted, `{{{`, "restored Jinja expression must not merge with a literal Modelica array brace")
+	a.NotContains(formatted, `}}}`, "restored Jinja expression must not merge with a literal Modelica array brace")
+	a.Contains(formatted, `{ {{ data["nominal_values"]["boiler_efficiency"] }} }`)
+}
+
 func TestInlineExpressionBeforeRawPunctuationDoesNotGainRenderedSpace(t *testing.T) {
 	a := require.New(t)
 	original := `model PumpTemplate

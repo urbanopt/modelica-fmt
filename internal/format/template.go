@@ -324,21 +324,37 @@ func reverseSub(text string, sub *subMap) (string, error) {
 	text = blockCommentedSubRegex.ReplaceAllString(text, "${1}")
 	text = trimWhitespaceBeforeRawPunctuation(text, sub)
 
-	var firstErr error
-	restored := normalSubRegex.ReplaceAllStringFunc(text, func(match string) string {
-		orig, err := sub.getText(match)
+	matches := normalSubRegex.FindAllStringIndex(text, -1)
+	var b strings.Builder
+	last := 0
+	for _, m := range matches {
+		start, end := m[0], m[1]
+		orig, err := sub.getText(text[start:end])
 		if err != nil {
-			if firstErr == nil {
-				firstErr = err
-			}
-			return match
+			return "", err
 		}
-		return orig
-	})
-	if firstErr != nil {
-		return "", firstErr
+
+		b.WriteString(text[last:start])
+
+		// A restored Jinja expression that starts/ends with its own `{{`/`}}`
+		// delimiters can collide with an immediately adjacent Modelica array
+		// brace (e.g. `{{{ ... }}}`), which is ambiguous when the template is
+		// re-rendered. Insert a single disambiguating space in that case. Only
+		// `{{`/`}}` expression delimiters are checked (not `{%`/`%}` control
+		// tags such as `{% raw %}`) so control-statement placeholders are
+		// unaffected.
+		if start > 0 && text[start-1] == '{' && strings.HasPrefix(orig, "{{") {
+			b.WriteByte(' ')
+		}
+		b.WriteString(orig)
+		if end < len(text) && text[end] == '}' && strings.HasSuffix(orig, "}}") {
+			b.WriteByte(' ')
+		}
+
+		last = end
 	}
-	return restored, nil
+	b.WriteString(text[last:])
+	return b.String(), nil
 }
 
 func trimWhitespaceBeforeRawPunctuation(text string, sub *subMap) string {
