@@ -45,7 +45,7 @@ func TestFormatHTMLDocStringBasic(t *testing.T) {
 	a := require.New(t)
 	out, err := formatHTMLDocString("<html><p>hi</p></html>", 0)
 	a.NoError(err)
-	a.Equal("<html>\n  <p>\n    hi\n  </p>\n</html>", out)
+	a.Equal("<html>\n  <p>hi</p>\n</html>", out)
 }
 
 func TestFormatHTMLDocStringBaseIndent(t *testing.T) {
@@ -126,19 +126,31 @@ func TestFormatHTMLDocStringInlineElementsStayOnOneLine(t *testing.T) {
 	src := "<html>\n<p>\nHello &amp; welcome to\n<b>Example</b>\n.\n</p>\n</html>"
 	out, err := formatHTMLDocString(src, 0)
 	a.NoError(err)
-	a.Equal("<html>\n  <p>\n    Hello &amp; welcome to <b>Example</b> .\n  </p>\n</html>", out)
+	a.Equal("<html>\n  <p>Hello &amp; welcome to <b>Example</b> .</p>\n</html>", out)
 
 	// A link with an attribute and a trailing sentence collapses to a single line.
 	src = "<html>\n<p>\nSee\n<a href=\"x\">Example</a>\nfor details.\n</p>\n</html>"
 	out, err = formatHTMLDocString(src, 0)
 	a.NoError(err)
-	a.Equal("<html>\n  <p>\n    See <a href=\"x\">Example</a> for details.\n  </p>\n</html>", out)
+	a.Equal("<html>\n  <p>See <a href=\"x\">Example</a> for details.</p>\n</html>", out)
 
 	// A void inline element (<br/>) joins the surrounding text on the same line.
 	src = "<html>\n<ul>\n<li>First:<br/>second.</li>\n</ul>\n</html>"
 	out, err = formatHTMLDocString(src, 0)
 	a.NoError(err)
 	a.Equal("<html>\n  <ul>\n    <li>\n      First:<br/>second.\n    </li>\n  </ul>\n</html>", out)
+
+	// Plain h4 headings compact like paragraphs.
+	src = "<html>\n<h4>\nReference\n</h4>\n</html>"
+	out, err = formatHTMLDocString(src, 0)
+	a.NoError(err)
+	a.Equal("<html>\n  <h4>Reference</h4>\n</html>", out)
+
+	// Attributed h4 headings keep the block-style multiline layout.
+	src = `<html><h4 class="ref">Reference</h4></html>`
+	out, err = formatHTMLDocString(src, 0)
+	a.NoError(err)
+	a.Equal("<html>\n  <h4 class=\"ref\">\n    Reference\n  </h4>\n</html>", out)
 }
 
 func TestMaybeFormatHTMLString(t *testing.T) {

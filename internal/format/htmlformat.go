@@ -38,6 +38,25 @@ var inlineElements = map[string]bool{
 	"acronym": true,
 }
 
+// compactBlockElements are block-level elements whose inline-only content should
+// stay on the same line as the opening and closing tags.
+var compactBlockElements = map[string]bool{
+	"p": true,
+}
+
+// compactBlockElementsWithoutAttributes are compacted only when the opening tag
+// has no attributes, e.g. <h4>Reference</h4> but not <h4 class="...">.
+var compactBlockElementsWithoutAttributes = map[string]bool{
+	"h4": true,
+}
+
+type htmlStackEntry struct {
+	name          string
+	inline        bool
+	lineIndex     int
+	hasAttributes bool
+}
+
 // isHTMLContent returns true if the (already unescaped) string content should be
 // treated as HTML. Per Modelica convention this is when the first non-whitespace
 // content is an opening <html> tag.
@@ -134,6 +153,25 @@ func isSelfClosingTag(raw string) bool {
 	return strings.HasSuffix(t, "/>")
 }
 
+// htmlStartTagHasAttributes reports whether a raw start tag has content after
+// the tag name other than optional whitespace, slash, and closing angle bracket.
+func htmlStartTagHasAttributes(raw string) bool {
+	s := strings.TrimSpace(raw)
+	s = strings.TrimPrefix(s, "<")
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case ' ', '\t', '\n', '\r', '\f', '\v', '/', '>':
+			rest := strings.TrimSpace(s[i:])
+			rest = strings.TrimSuffix(rest, ">")
+			rest = strings.TrimSpace(rest)
+			rest = strings.TrimSuffix(rest, "/")
+			rest = strings.TrimSpace(rest)
+			return rest != ""
+		}
+	}
+	return false
+}
+
 // collapseInlineWhitespace collapses runs of ASCII whitespace to a single space
 // while preserving a single leading/trailing space when the original text had one,
 // so inline text joins cleanly with adjacent inline elements. Non-ASCII bytes
@@ -176,7 +214,7 @@ func collapseInlineWhitespace(s string) string {
 func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 	z := html.NewTokenizer(strings.NewReader(decoded))
 	var lines []string
-	var stack []string
+	var stack []htmlStackEntry
 	depth := baseIndent
 
 	var inline strings.Builder
@@ -226,7 +264,7 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 			if inlineElements[name] {
 				inline.WriteString(raw)
 				if !voidElements[name] && !isSelfClosingTag(raw) {
-					stack = append(stack, name)
+					stack = append(stack, htmlStackEntry{name: name, inline: true})
 				}
 				break
 			}
@@ -236,7 +274,11 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 			if voidElements[name] || isSelfClosingTag(raw) {
 				break
 			}
-			stack = append(stack, name)
+			stack = append(stack, htmlStackEntry{
+				name:          name,
+				lineIndex:     len(lines) - 1,
+				hasAttributes: htmlStartTagHasAttributes(raw),
+			})
 			depth++
 		case html.EndTagToken:
 			name := htmlTagName(raw)
@@ -253,12 +295,22 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 			if len(stack) == 0 {
 				return "", fmt.Errorf("unexpected closing tag </%s> (no matching opening tag)", name)
 			}
-			if stack[len(stack)-1] != name {
-				return "", fmt.Errorf("mismatched closing tag </%s> (expected </%s>)", name, stack[len(stack)-1])
+			entry := stack[len(stack)-1]
+			if entry.name != name {
+				return "", fmt.Errorf("mismatched closing tag </%s> (expected </%s>)", name, entry.name)
 			}
 			stack = stack[:len(stack)-1]
-			if inlineElements[name] {
+			if entry.inline {
 				inline.WriteString(raw)
+				break
+			}
+			text := strings.Trim(inline.String(), " \t\n\r\f\v")
+			canCompact := compactBlockElements[name] ||
+				(compactBlockElementsWithoutAttributes[name] && !entry.hasAttributes)
+			if canCompact && text != "" && entry.lineIndex == len(lines)-1 {
+				inline.Reset()
+				depth--
+				lines[entry.lineIndex] += text + raw
 				break
 			}
 			// block element
@@ -273,7 +325,11 @@ func formatHTMLDocString(decoded string, baseIndent int) (string, error) {
 
 	flushInline()
 	if len(stack) != 0 {
-		return "", fmt.Errorf("unclosed tag(s): <%s>", strings.Join(stack, ">, <"))
+		names := make([]string, 0, len(stack))
+		for _, entry := range stack {
+			names = append(names, entry.name)
+		}
+		return "", fmt.Errorf("unclosed tag(s): <%s>", strings.Join(names, ">, <"))
 	}
 	return strings.Join(lines, "\n"), nil
 }

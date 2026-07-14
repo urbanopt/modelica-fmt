@@ -7,12 +7,8 @@ model Example
     Documentation(
       info="
         <html>
-          <p>
-            Hello &amp; welcome to <b>Example</b>.
-          </p>
-          <p>
-            See <a href=\"modelica://Some.Package.Example\">Example</a> for more details and a four-pipe fan coil unit model derived from the base classes.
-          </p>
+          <p>Hello &amp; welcome to <b>Example</b>.</p>
+          <p>See <a href=\"modelica://Some.Package.Example\">Example</a> for more details and a four-pipe fan coil unit model derived from the base classes.</p>
           <pre>
   code line one
     indented code line

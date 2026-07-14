@@ -86,11 +86,13 @@ This feature is **opt-in** and intentionally conservative:
 - Only whitespace/indentation changes — tags, attributes, entities (e.g. `&amp;`) and text
   are preserved exactly, and the `\"` escaping inside Modelica strings is round-tripped
   losslessly. The result is idempotent.
-- Block-level elements (e.g. `<p>`, `<ul>`, `<li>`, `<div>`), comments and doctypes are
-  placed on their own lines indented to their nesting depth. Inline/phrasing elements
-  (e.g. `<b>`, `<i>`, `<a>`, `<code>`, `<span>`, `<br/>`) and the text around them stay
-  together on one line, so short markup such as `<b>Example</b>` or
-  `<a href=\"...\">link</a>` is kept condensed instead of exploded one tag per line.
+- Block-level elements (e.g. `<ul>`, `<li>`, `<div>`), comments and doctypes are placed
+  on their own lines indented to their nesting depth. Paragraphs with inline-only content
+  and plain `<h4>` headings keep their opening tag, inline content, and closing tag on one
+  line; attributed `<h4>` headings keep block layout. Inline/phrasing elements (e.g. `<b>`,
+  `<i>`, `<a>`, `<code>`, `<span>`, `<br/>`) and the text around them stay together on one
+  line, so short markup such as `<p><b>Example</b></p>` or `<a href=\"...\">link</a>` is
+  kept condensed instead of exploded one tag per line.
 - Whitespace-sensitive elements (`<pre>`, `<textarea>`, `<script>`, `<style>`) are left
   verbatim.
 - Malformed or unbalanced HTML is never reflowed (so it can't be corrupted). Instead the
@@ -207,7 +209,5 @@ If the grammar file (Modelica.g4) has been edited, you'll need to regenerate the
 ```
 
 ## Known Issues
-
-
 
 
