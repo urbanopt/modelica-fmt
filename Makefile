@@ -1,10 +1,11 @@
-.PHONY: help all build test clean generate-parser update-testdata release-check release
+.PHONY: help all build test clean generate-parser update-testdata changelog-check release-check release
 
 .DEFAULT_GOAL := help
 
 GO ?= go
 BINARY ?= modelica-fmt
 REMOTE ?= origin
+CHANGELOG ?= CHANGELOG.md
 VERSION ?=
 TAG ?= $(if $(VERSION),$(if $(filter v%,$(VERSION)),$(VERSION),v$(VERSION)))
 MESSAGE ?= Release $(TAG)
@@ -12,6 +13,7 @@ SHA ?= HEAD
 VERSION_ID := $(patsubst v%,%,$(TAG))
 COMMIT := $(shell git rev-parse --short=12 $(SHA) 2>/dev/null)
 DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+RELEASE_DATE := $(shell date -u +%Y-%m-%d)
 RELEASE_LDFLAGS := -X main.version=$(VERSION_ID) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.builtBy=make
 
 help:
@@ -22,8 +24,13 @@ help:
 	@echo "  clean            remove build artifacts"
 	@echo "  generate-parser  regenerate parser from grammar"
 	@echo "  update-testdata  regenerate formatter test data"
+	@echo "  changelog-check  verify $(CHANGELOG) has unreleased notes"
 	@echo "  release-check    verify release build metadata (VERSION=x.y.z)"
 	@echo "  release          check, tag, and push a release (VERSION=x.y.z)"
+	@echo ""
+	@echo "$(CHANGELOG) is the source of truth for release notes: entries added"
+	@echo "under '## [Unreleased]' are moved into a dated '## [vX.Y.Z]' section by"
+	@echo "'make release' and published verbatim as the GitHub release body."
 
 all: build test
 
@@ -42,7 +49,14 @@ generate-parser:
 update-testdata:
 	./update_testdata.sh
 
-release-check: test
+changelog-check:
+	@notes="$$(scripts/changelog.sh extract Unreleased $(CHANGELOG))"; \
+	if [ -z "$$(printf '%s' "$$notes" | tr -d '[:space:]')" ]; then \
+		echo "error: $(CHANGELOG) has no entries under '## [Unreleased]'; add release notes before releasing"; \
+		exit 2; \
+	fi
+
+release-check: test changelog-check
 	@if [ -z "$(TAG)" ]; then \
 		echo "error: set VERSION=x.y.z or TAG=vx.y.z"; \
 		exit 2; \
@@ -70,9 +84,21 @@ release-check: test
 		echo "error: expected $(BINARY) -v to report version $(VERSION_ID)"; \
 		exit 2; \
 	}
-	goreleaser check
-	goreleaser release --snapshot --clean
+	@notes_file="$$(mktemp)"; \
+	trap 'rm -f "$$notes_file"' EXIT; \
+	scripts/changelog.sh extract Unreleased $(CHANGELOG) > "$$notes_file"; \
+	goreleaser check; \
+	goreleaser release --snapshot --clean --release-notes "$$notes_file"
 
 release: release-check
-	git tag -a "$(TAG)" -m "$(MESSAGE)" "$(SHA)"
+	@if [ "$$(git rev-parse $(SHA))" != "$$(git rev-parse HEAD)" ]; then \
+		echo "error: automatic $(CHANGELOG) finalization requires SHA=HEAD (got $(SHA));"; \
+		echo "       finalize $(CHANGELOG) for $(TAG) manually and retry, or release from HEAD"; \
+		exit 2; \
+	fi
+	scripts/changelog.sh finalize "$(TAG)" "$(RELEASE_DATE)" $(CHANGELOG)
+	git add $(CHANGELOG)
+	git commit -m "docs: update $(CHANGELOG) for $(TAG)"
+	git tag -a "$(TAG)" -m "$(MESSAGE)" HEAD
+	git push "$(REMOTE)" HEAD
 	git push "$(REMOTE)" "$(TAG)"
