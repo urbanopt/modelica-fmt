@@ -216,6 +216,19 @@ go build .
 go build -o modelicafmt
 ```
 
+## Release
+
+See [docs/release.md](docs/release.md) for the full release process. Before
+creating the release tag, fast-forward `main` to the current `develop` branch so
+both branch heads point at the same release commit:
+
+```bash
+git fetch origin main develop
+git push origin refs/remotes/origin/develop:refs/heads/main
+```
+
+The push is fast-forward-only by default; it will be rejected if `main` cannot
+move directly to `develop`.
 
 ## Updating Parser (Modelica Grammar)
 
