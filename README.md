@@ -5,13 +5,32 @@ The Modelica Formatter provides the ability to automatically format Modelica cod
 ## Running
 
 ```bash
-modelica-fmt [-w] [-help] <sources>...
-Options:
-  -w            overwrite source with formatted output. If flag is not present print to stdout
-  -template     template dialect used for .mot/.mopt files (currently: jinja)
-  -wrap-arrays  wrap multidimensional arrays ({...}) across multiple lines (outside annotations)
-Arguments:
-  sources  one or more files or directories to format
+modelica-fmt [options] <sources>...
+```
+
+### Options
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `-w` | `false` | Overwrite the source file(s) with the formatted output. If omitted, the formatted result is printed to stdout. |
+| `-v` | `false` | Display the tool version and exit. |
+| `-line-length <n>` | `-1` | Maximum number of characters allowed per line before wrapping; `-1` means no limit. |
+| `-extra-padding` | `false` | **BETA:** add empty lines for padding to improve visual separation. |
+| `-wrap-arrays` | `false` | Wrap multidimensional arrays (`{...}`) across multiple lines outside of annotations. See [Array formatting](#array-formatting--wrap-arrays). |
+| `-template <dialect>` | `jinja` | Template dialect used for `.mot`/`.mopt` files (currently only `jinja`). See [Templated Modelica files](#templated-modelica-motmopt-files). |
+| `-format-html` | `false` | Pretty-print HTML content embedded in annotation strings (e.g., `Documentation(info=...)` / `revisions=...`). See [Formatting HTML in annotations](#formatting-html-in-annotations). |
+| `-help` | | Print usage information and exit. |
+
+### Arguments
+
+| Argument | Description |
+| --- | --- |
+| `sources` | One or more `.mo`, `.mot`, or `.mopt` files or directories to format. Directories are searched recursively. |
+
+For example, to overwrite a file in place while wrapping lines at 80 characters:
+
+```bash
+modelica-fmt -w -line-length 80 internal/format/testdata/gmt-building.mo
 ```
 
 ### Array formatting (`-wrap-arrays`)
@@ -48,6 +67,67 @@ To try the formatter against the bundled test data:
 ```
 
 The resulting .mo file can be diffed to the previous file to compare how the modelica-fmt updates the file.
+
+## Formatting HTML in annotations
+
+Modelica annotations commonly embed HTML documentation, e.g.
+`Documentation(info="<html>...</html>")` and `revisions="..."`. By default the entire
+annotation string is emitted verbatim. Pass `--format-html` to pretty-print the embedded
+HTML so it is indented consistently with the surrounding Modelica structure:
+
+```bash
+./modelica-fmt --format-html internal/format/testdata/gmt-building.mo
+```
+
+This feature is **opt-in** and intentionally conservative:
+
+- A string is treated as HTML only when its content begins with `<html>` (the Modelica
+  convention), so key names like `info`/`revisions` are not hard-coded.
+- Only whitespace/indentation changes — tags, attributes, entities (e.g., `&amp;`) and text
+  are preserved exactly, and the `\"` escaping inside Modelica strings is round-tripped
+  losslessly. The result is idempotent.
+- Block-level elements (e.g., `<ul>`, `<li>`, `<div>`), comments and doctypes are placed
+  on their own lines indented to their nesting depth. Paragraphs with inline-only content
+  and plain `<h4>` headings keep their opening tag, inline content, and closing tag on one
+  line; attributed `<h4>` headings keep block layout. Inline/phrasing elements (e.g., `<b>`,
+  `<i>`, `<a>`, `<code>`, `<span>`, `<br/>`) and the text around them stay together on one
+  line, so short markup such as `<p><b>Example</b></p>` or `<a href=\"...\">link</a>` is
+  kept condensed instead of exploded one tag per line.
+- Whitespace-sensitive elements (`<pre>`, `<textarea>`, `<script>`, `<style>`) are left
+  verbatim.
+- Malformed or unbalanced HTML is never reflowed (so it can't be corrupted). Instead the
+  tool reports a clear error naming the offending tag, leaves the file unchanged, and exits
+  non-zero (see [Behavior on malformed HTML](#behavior-on-malformed-html)).
+- HTML lines do not participate in the `--line-length` limit.
+
+### Behavior on malformed HTML
+
+When `--format-html` is enabled and an annotation string looks like HTML (its content
+starts with `<html>`) but is malformed or unbalanced — for example a mismatched or missing
+closing tag — the tool does **not** silently emit it unformatted. It fails with a clear
+message identifying the file and the problem, and leaves the file unchanged:
+
+```console
+$ modelica-fmt --format-html MyModel.mo
+error: MyModel.mo: malformed HTML in annotation string: mismatched closing tag </html> (expected </p>)
+skipping MyModel.mo (file left unchanged)
+```
+
+The process exits non-zero in this case, so the failure is visible in CI and pre-commit
+hooks rather than being silently ignored. Fix the HTML (or run without `--format-html`) and
+re-run. When `--format-html` is disabled, annotation strings are never inspected, so
+malformed HTML has no effect.
+
+### Known limitations
+
+These are intentional v1 trade-offs, documented here so they are easy to revisit later:
+
+- **Inline runs collapse to a single line.** A run of text and inline elements is placed on
+  one line (its internal whitespace runs collapsed to single spaces), so a long paragraph
+  becomes one long line; it is not wrapped to `--line-length`.
+- **Conservative handling of unbalanced HTML.** HTML with omitted closing tags (e.g., a bare
+  `<li>` or `<p>`) or mismatched tags is not reflowed; it is reported as an error and the
+  file is left unchanged rather than reflowed, to avoid corrupting content.
 
 ## Templated Modelica (`.mot`/`.mopt`) files
 
@@ -129,7 +209,3 @@ If the grammar file (Modelica.g4) has been edited, you'll need to regenerate the
 ```
 
 ## Known Issues
-
-
-
-

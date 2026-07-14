@@ -23,6 +23,7 @@ var (
 	lineLength    = flag.Int("line-length", -1, "how many characters allowed per line; -1 means no max")
 	templateFlag  = flag.String("template", format.DialectJinja, "template dialect for .mot/.mopt files (jinja)")
 	wrapArrays    = flag.Bool("wrap-arrays", false, "wrap multidimensional arrays ({...}) across multiple lines (outside annotations)")
+	formatHTML    = flag.Bool("format-html", false, "pretty-print HTML content inside annotation strings (e.g., Documentation info/revisions)")
 	// hadError is set to true when a file could not be processed, so the
 	// program can exit with a non-zero status without aborting other files
 	hadError bool
@@ -51,9 +52,9 @@ func isModelicaFile(f os.FileInfo) bool {
 
 func processAndWriteFile(filename string) {
 	var b bytes.Buffer
-	err := format.ProcessFile(filename, &b, format.NewConfig(*lineLength, *emptyLineFlag, *wrapArrays), *templateFlag)
+	err := format.ProcessFile(filename, &b, format.NewConfig(*lineLength, *emptyLineFlag, *wrapArrays, *formatHTML), *templateFlag)
 	if err != nil {
-		// The file could not be parsed cleanly (e.g. it contains an
+		// The file could not be parsed cleanly (e.g., it contains an
 		// unrecognized token). Leave the original file untouched and report
 		// the error instead of writing malformed output.
 		fmt.Fprintln(os.Stderr, "error: "+err.Error())
@@ -115,7 +116,7 @@ func main() {
 	}
 
 	// exit non-zero if any file failed to process so the failure is not
-	// silently ignored (e.g. in CI or pre-commit hooks)
+	// silently ignored (e.g., in CI or pre-commit hooks)
 	if hadError {
 		os.Exit(1)
 	}

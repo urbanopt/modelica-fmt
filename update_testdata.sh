@@ -18,6 +18,8 @@ done
 ./modelica-fmt -wrap-arrays ./internal/format/testdata/example-arrays-nd.mo > ./internal/format/testdata/example-arrays-nd-out.mo
 ./modelica-fmt -line-length 80 ./internal/format/testdata/gmt-building.mo > ./internal/format/testdata/gmt-building-80-out.mo
 ./modelica-fmt -extra-padding ./internal/format/testdata/gmt-building.mo > ./internal/format/testdata/gmt-building-empty-lines-out.mo
+./modelica-fmt -format-html ./internal/format/testdata/html-annotation.mo > ./internal/format/testdata/html-annotation-html-out.mo
+./modelica-fmt -format-html ./internal/format/testdata/gmt-building.mo > ./internal/format/testdata/gmt-building-html-out.mo
 
 for file in ./internal/format/testdata/*.mot; do
     if [[ $file == *-out.mot ]]; then

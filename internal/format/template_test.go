@@ -20,18 +20,18 @@ var templateFileTests = []struct {
 	formatterConfig Config
 }{
 	// simple {{ ... }} expressions
-	{"gmt-boiler-polynomial.mot", "gmt-boiler-polynomial-out.mot", Config{-1, false, false}},
+	{"gmt-boiler-polynomial.mot", "gmt-boiler-polynomial-out.mot", Config{-1, false, false, false}},
 	// {% if %}/{% else %}/{% endif %} control statements plus expressions
-	{"gmt-design-data-series.mot", "gmt-design-data-series-out.mot", Config{-1, false, false}},
+	{"gmt-design-data-series.mot", "gmt-design-data-series-out.mot", Config{-1, false, false, false}},
 	// {% raw %} ... {% endraw %} blocks interleaved with expressions
-	{"gmt-cooling-indirect.mot", "gmt-cooling-indirect-out.mot", Config{-1, false, false}},
+	{"gmt-cooling-indirect.mot", "gmt-cooling-indirect-out.mot", Config{-1, false, false, false}},
 	// {% for %} loops + a filter expression + many {% raw %} blocks (SpawnBuilding)
-	{"gmt-spawn-building.mot", "gmt-spawn-building-out.mot", Config{-1, false, false}},
+	{"gmt-spawn-building.mot", "gmt-spawn-building-out.mot", Config{-1, false, false, false}},
 	// {% if %} control plus a dozen {% raw %} blocks in a large file (TimeSeriesBuilding)
-	{"gmt-time-series-building.mot", "gmt-time-series-building-out.mot", Config{-1, false, false}},
+	{"gmt-time-series-building.mot", "gmt-time-series-building-out.mot", Config{-1, false, false, false}},
 	// {% for %} loop over array elements with a conditional comma.
-	{"gmt-dhc-5g-wh-ghx-hpdirectcooling-variable-dist.mot", "gmt-dhc-5g-wh-ghx-hpdirectcooling-variable-dist-out.mot", Config{-1, false, false}},
-	{"gmt-hptrio-variable-dist.mot", "gmt-hptrio-variable-dist-out.mot", Config{-1, false, false}},
+	{"gmt-dhc-5g-wh-ghx-hpdirectcooling-variable-dist.mot", "gmt-dhc-5g-wh-ghx-hpdirectcooling-variable-dist-out.mot", Config{-1, false, false, false}},
+	{"gmt-hptrio-variable-dist.mot", "gmt-hptrio-variable-dist-out.mot", Config{-1, false, false, false}},
 }
 
 func TestFormattingTemplateExamples(t *testing.T) {
@@ -121,7 +121,7 @@ func TestPreviouslySkippedTemplatesDoNotError(t *testing.T) {
 			a.NoError(err)
 
 			var out bytes.Buffer
-			err = ProcessFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false}, DialectJinja)
+			err = ProcessFile(path.Join("testdata", testCase.sourceFile), &out, Config{-1, false, false, false}, DialectJinja)
 			a.NoError(err)
 			a.Equal(stripWhitespace(string(source)), stripWhitespace(out.String()),
 				"processing a .mot template must preserve non-whitespace content")
@@ -135,7 +135,7 @@ func TestStandaloneControlTagsKeepLineBoundaries(t *testing.T) {
 	err := ProcessFile(
 		path.Join("testdata", "gmt-district-energy-system.mot"),
 		&out,
-		Config{-1, false, false},
+		Config{-1, false, false, false},
 		DialectJinja)
 	a.NoError(err)
 
@@ -164,7 +164,7 @@ func TestStandaloneRawTagsKeepLineBoundaries(t *testing.T) {
 end RawBlock;
 `
 	var out bytes.Buffer
-	err := processTemplate(original, &out, Config{-1, false, false}, DialectJinja, "raw-block.mot")
+	err := processTemplate(original, &out, Config{-1, false, false, false}, DialectJinja, "raw-block.mot")
 	a.NoError(err)
 
 	formatted := out.String()
@@ -181,7 +181,7 @@ func TestMoptFilesUseTemplatePipeline(t *testing.T) {
 	defer os.Remove(sourceFile)
 
 	var out bytes.Buffer
-	err := ProcessFile(sourceFile, &out, Config{-1, false, false}, DialectJinja)
+	err := ProcessFile(sourceFile, &out, Config{-1, false, false, false}, DialectJinja)
 	a.NoError(err)
 	a.Equal("model {{ model_name }}\nend {{ model_name }};\n", out.String())
 }
@@ -195,7 +195,7 @@ func TestNonModelicaTemplatePassesThrough(t *testing.T) {
 	a.NoError(err)
 
 	var out bytes.Buffer
-	err = ProcessFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false}, DialectJinja)
+	err = ProcessFile(path.Join("testdata", "gmt-run-spawn-building.mot"), &out, Config{-1, false, false, false}, DialectJinja)
 	a.NoError(err)
 	a.Equal(string(source), out.String())
 }
@@ -206,7 +206,7 @@ func TestTemplateWithMeaningfulDiffPassesThrough(t *testing.T) {
 	a.NoError(err)
 
 	var out bytes.Buffer
-	err = ProcessFile(path.Join("testdata", "gmt-district-energy-system.mot"), &out, Config{-1, false, false}, DialectJinja)
+	err = ProcessFile(path.Join("testdata", "gmt-district-energy-system.mot"), &out, Config{-1, false, false, false}, DialectJinja)
 	a.NoError(err)
 	a.Equal(string(source), out.String())
 }
@@ -284,7 +284,7 @@ func TestLoopedArrayDoesNotCreateJinjaExpressionStart(t *testing.T) {
 end LoopedArray;
 `
 	var out bytes.Buffer
-	err := processTemplate(original, &out, Config{-1, false, false}, DialectJinja, "looped-array.mot")
+	err := processTemplate(original, &out, Config{-1, false, false, false}, DialectJinja, "looped-array.mot")
 	a.NoError(err)
 
 	formatted := out.String()
@@ -301,7 +301,7 @@ func TestInlineExpressionBeforeRawPunctuationDoesNotGainRenderedSpace(t *testing
 {% endraw %}end PumpTemplate;
 `
 	var out bytes.Buffer
-	err := processTemplate(original, &out, Config{-1, false, false}, DialectJinja, "pump-template.mot")
+	err := processTemplate(original, &out, Config{-1, false, false, false}, DialectJinja, "pump-template.mot")
 	a.NoError(err)
 
 	formatted := out.String()
@@ -343,7 +343,7 @@ func TestDollarExpressionRoundTrip(t *testing.T) {
 }
 
 // TestReverseSubHandlesWidePlaceholders ensures placeholders wider than the
-// %03d minimum (i.e. 1000+ substitutions) are restored correctly rather than
+// %03d minimum (i.e., 1000+ substitutions) are restored correctly rather than
 // leaving a stray trailing digit.
 func TestReverseSubHandlesWidePlaceholders(t *testing.T) {
 	a := require.New(t)

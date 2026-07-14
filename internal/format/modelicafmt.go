@@ -22,16 +22,20 @@ type Config struct {
 	// kept inline; the outer `max(N-2, 1)` dimension levels are broken. See
 	// issue #29.
 	wrapArrays bool
+	// formatHTML, when true, pretty-prints HTML content embedded in annotation
+	// strings (e.g., Documentation info/revisions). See issue #40.
+	formatHTML bool
 }
 
 // NewConfig builds a Config from the formatter's tunable options. It exists so
-// that callers outside this package (e.g. the CLI) can construct a Config
+// that callers outside this package (e.g., the CLI) can construct a Config
 // without needing the unexported fields to be exported.
-func NewConfig(maxLineLength int, emptyLines, wrapArrays bool) Config {
+func NewConfig(maxLineLength int, emptyLines, wrapArrays, formatHTML bool) Config {
 	return Config{
 		maxLineLength: maxLineLength,
 		emptyLines:    emptyLines,
 		wrapArrays:    wrapArrays,
+		formatHTML:    formatHTML,
 	}
 }
 
@@ -183,7 +187,7 @@ type modelicaListener struct {
 	indentationStack             []indent      // a stack used for tracking rendered and ignored indentations
 	onNewLine                    bool          // true when write position succeeds a newline character
 	withinOnCurrentLine          bool          // true when `within` statement is found on the current line
-	insideBracket                bool          // true when inside brackets (i.e. `[]`)
+	insideBracket                bool          // true when inside brackets (i.e., `[]`)
 	lineIndentIncreased          bool          // true when the indentation level has already been increased for a line
 	previousTokenText            string        // text of previous token
 	previousTokenIdx             int           // index of previous token
@@ -234,6 +238,12 @@ type modelicaListener struct {
 	inNamedArgument   int  // counts number of current or ancestor contexts that are named argument
 	inVector          int  // counts number of current or ancestor contexts that are vector
 	inLastSemicolon   bool // true if the listener is handling the last_semicolon rule
+
+	// htmlErrors collects problems encountered while formatting embedded HTML
+	// annotation strings (only when config.formatHTML is enabled). A non-empty
+	// slice causes processFile to fail so the malformed HTML is reported clearly
+	// instead of being silently left unformatted.
+	htmlErrors []string
 
 	// Other config
 	config Config
@@ -342,6 +352,21 @@ func (l *modelicaListener) writeString(str string) {
 	l.currentLineLength += charsOnLastLine
 }
 
+// writeHTMLString writes a pre-formatted, multi-line HTML string literal. Unlike
+// writeString it does not apply line-length breaking, since the HTML has already
+// been laid out with its own indentation.
+func (l *modelicaListener) writeHTMLString(formatted string) {
+	prefix := l.getSpaceBefore(formatted, false)
+	l.writer.WriteString(prefix + formatted)
+
+	lastNewlineIndex := strings.LastIndex(formatted, "\n")
+	if lastNewlineIndex < 0 {
+		l.currentLineLength += len(prefix) + len(formatted)
+	} else {
+		l.currentLineLength = len(formatted) - (lastNewlineIndex + 1)
+	}
+}
+
 func (l *modelicaListener) writeNewline() {
 	// explicitly not using l.writeString here b/c it's not necessary and I think we could end up in infinite recursion (though really unlikely)
 	l.writer.WriteString("\n")
@@ -407,7 +432,23 @@ func (l *modelicaListener) VisitTerminal(node antlr.TerminalNode) {
 		l.writeComment(commentToken)
 	}
 
-	l.writeString(node.GetText())
+	if l.config.formatHTML && node.GetSymbol().GetTokenType() == parser.ModelicaLexerSTRING {
+		formatted, ok, err := maybeFormatHTMLString(node.GetText(), l.indentation()+1)
+		if err != nil {
+			// The string is an HTML docstring (starts with <html>) but could not
+			// be formatted because it is malformed/unbalanced. Record a clear
+			// error so processFile fails loudly rather than silently emitting the
+			// HTML unformatted, and leave the original token unchanged.
+			l.htmlErrors = append(l.htmlErrors, err.Error())
+		}
+		if ok {
+			l.writeHTMLString(formatted)
+		} else {
+			l.writeString(node.GetText())
+		}
+	} else {
+		l.writeString(node.GetText())
+	}
 
 	if l.previousTokenText == "within" {
 		l.withinOnCurrentLine = true
@@ -521,7 +562,7 @@ func (l *modelicaListener) ExitVector(node *parser.VectorContext) {
 }
 
 // expressionAsVector returns the VectorContext that an expression consists of,
-// if the expression is purely a vector literal (e.g. an element of a
+// if the expression is purely a vector literal (e.g., an element of a
 // multidimensional array like `{1, 2}` in `{{1, 2}, {3, 4}}`). It returns nil
 // if the expression is anything else (a scalar, an arithmetic expression, a
 // function call, etc). It works by descending the single-child expression chain
@@ -541,7 +582,7 @@ func expressionAsVector(node antlr.Tree) *parser.VectorContext {
 }
 
 // directElementVectors returns the vectors which are direct elements of the
-// given vector (i.e. the sub-arrays of a multidimensional array). Elements which
+// given vector (i.e., the sub-arrays of a multidimensional array). Elements which
 // are not bare vectors (scalars, expressions, iterator constructors, ...) are
 // skipped.
 func directElementVectors(node *parser.VectorContext) []*parser.VectorContext {
@@ -696,7 +737,7 @@ func formatModelica(text string, out io.Writer, config Config, filename string) 
 	lexer := parser.NewModelicaLexer(inputStream)
 
 	// collect lexer and parser errors so that a file which fails to parse
-	// (e.g. contains an unrecognized token) is not silently formatted with a
+	// (e.g., contains an unrecognized token) is not silently formatted with a
 	// truncated/incorrect parse tree
 	errorListener := newParseErrorListener()
 	lexer.RemoveErrorListeners()
@@ -732,10 +773,17 @@ func formatModelica(text string, out io.Writer, config Config, filename string) 
 		return fmt.Errorf("%s: %s", filename, strings.Join(errorListener.errors, "; "))
 	}
 
+	// if any embedded HTML annotation strings were malformed (only possible when
+	// formatHTML is enabled), report them clearly and leave the file unchanged
+	// rather than silently emitting unformatted HTML
+	if len(listener.htmlErrors) > 0 {
+		return fmt.Errorf("%s: malformed HTML in annotation string: %s", filename, strings.Join(listener.htmlErrors, "; "))
+	}
+
 	// guard against silently emptying a file: if the input had meaningful
 	// content but the formatter produced no non-whitespace output, the parser
 	// almost certainly matched an empty stored_definition without raising an
-	// error (e.g. the file is not actually Modelica). Refuse rather than
+	// error (e.g., the file is not actually Modelica). Refuse rather than
 	// overwrite the original with an empty file.
 	if strings.TrimSpace(text) != "" && counter.nonWhitespace == 0 {
 		return fmt.Errorf("%s: refusing to write empty output for non-empty input (file does not appear to be valid Modelica)", filename)
