@@ -1,5 +1,11 @@
 # Unreleased
 
+* Fix `.mot`/`.mopt` formatting collapsing the space in a single-element array
+  literal whose element is a Jinja expression (e.g. `{ {{ data[...] }} }`),
+  which produced an ambiguous `{{{ ... }}}` triple-brace sequence. A single
+  disambiguating space is now preserved whenever a restored Jinja expression's
+  own `{{`/`}}` delimiters would otherwise merge with an adjacent Modelica
+  array brace.
 * Tweak default formatting for readability (issue #26):
   * Keep a function call with a single argument on one line instead of breaking
     the argument onto its own line, e.g. `pre(x)`, `der(y)`, `sin(z)`,
