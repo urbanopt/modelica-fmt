@@ -25,6 +25,10 @@ checksum:
   name_template: 'checksums.txt'
 snapshot:
   version_template: "{{ .Tag }}-next"
+# CHANGELOG.md is the source of truth for release notes: publish.yml and
+# `make release` pass --release-notes with the relevant CHANGELOG.md section,
+# which skips this generated changelog. It's kept as a fallback for ad-hoc
+# `goreleaser release` runs made without going through the Makefile/scripts.
 changelog:
   sort: asc
   filters:

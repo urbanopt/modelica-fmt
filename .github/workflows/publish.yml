@@ -20,10 +20,13 @@ jobs:
         with:
           go-version-file: go.mod
       -
+        name: Extract release notes from CHANGELOG.md
+        run: scripts/changelog.sh extract "${{ github.ref_name }}" > /tmp/release-notes.md
+      -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
           version: latest
-          args: release --clean
+          args: release --clean --release-notes=/tmp/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
